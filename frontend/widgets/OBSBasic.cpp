@@ -1388,7 +1388,15 @@ void OBSBasic::OnFirstLoad()
 	}
 }
 
-OBSBasic::~OBSBasic() {}
+OBSBasic::~OBSBasic()
+{
+#ifdef _WIN32
+	// Finish thumbnail workers before OBSBasic is destroyed. Workers post their
+	// results to this object, so QObject can safely discard pending callbacks.
+	RecordingThumbnailPool().clear();
+	RecordingThumbnailPool().waitForDone();
+#endif
+}
 
 void OBSBasic::applicationShutdown() noexcept
 {
@@ -2343,12 +2351,12 @@ void OBSBasic::SetupSimpleRecorderUi()
 #ifdef _WIN32
 				QPointer<QListWidget> listGuard(list);
 				const QString filePath = info.absoluteFilePath();
-				RecordingThumbnailPool().start(QRunnable::create([listGuard, filePath]() {
+				RecordingThumbnailPool().start(QRunnable::create([this, listGuard, filePath]() {
 					QImage thumbnail = LoadShellVideoThumbnail(filePath);
-					if (thumbnail.isNull() || !listGuard)
+					if (thumbnail.isNull())
 						return;
 
-					QMetaObject::invokeMethod(listGuard.data(), [listGuard, filePath, thumbnail]() {
+					QMetaObject::invokeMethod(this, [listGuard, filePath, thumbnail]() {
 						if (!listGuard)
 							return;
 						for (int row = 0; row < listGuard->count(); ++row) {
