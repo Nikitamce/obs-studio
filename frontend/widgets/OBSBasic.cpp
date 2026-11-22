@@ -2768,8 +2768,8 @@ void OBSBasic::SetSimpleRecorderMode(bool studioMode)
 	ui->menubar->setVisible(studioMode);
 	ui->statusbar->setVisible(studioMode);
 
-	ui->simpleStudioModeButton->setText(studioMode ? QStringLiteral("Простой режим")
-								       : QStringLiteral("Студийный режим"));
+	ui->simpleStudioModeButton->setText(studioMode ? QStringLiteral("Компактный режим")
+								       : QStringLiteral("Полный интерфейс"));
 	setWindowTitle(studioMode ? QStringLiteral("OBS Studio") : QStringLiteral("OBS Recorder"));
 
 	// In recorder mode keep the main window close to a compact Bandicam-style
