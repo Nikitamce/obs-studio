@@ -54,6 +54,127 @@
      <number>0</number>
     </property>
     <item>
+ <widget class="QFrame" name="simpleRecorderBar">
+    <property name="minimumSize">
+     <size><width>0</width><height>116</height></size>
+    </property>
+    <property name="maximumSize">
+     <size><width>16777215</width><height>116</height></size>
+    </property>
+    <property name="styleSheet">
+     <string notr="true">QFrame#simpleRecorderBar { background: #202124; border: 1px solid #34363a; border-radius: 10px; } QLabel { color: #f1f3f4; } QLabel#simpleRecordStatus { background: #2b3036; border-radius: 6px; padding: 6px 10px; } QPushButton { background: #303238; color: #f4f5f7; border: 1px solid #45474d; border-radius: 7px; padding: 8px 14px; min-height: 20px; } QPushButton:hover { background: #3b3e45; } QPushButton:checked { background: #245e49; border-color: #3b8e6d; } QPushButton:disabled { color: #777d87; background: #27292e; } QPushButton:pressed { background: #292b30; } QPushButton#simpleRecordButton { background: #d93645; border: 1px solid #ee6570; color: white; font-weight: 700; min-width: 116px; } QPushButton#simpleRecordButton:hover { background: #eb4654; } QComboBox { background: #303238; color: #f4f5f7; border: 1px solid #45474d; border-radius: 7px; padding: 7px 10px; min-height: 22px; }</string>
+    </property>
+    <layout class="QVBoxLayout" name="simpleRecorderLayout">
+     <property name="leftMargin"><number>14</number></property>
+     <property name="topMargin"><number>8</number></property>
+     <property name="rightMargin"><number>14</number></property>
+     <property name="bottomMargin"><number>8</number></property>
+     <property name="spacing"><number>8</number></property>
+     <item>
+      <layout class="QHBoxLayout" name="simpleRecorderTopLayout">
+            <item>
+                  <widget class="QLabel" name="simpleRecorderTitle">
+                   <property name="text"><string>ЗАПИСЬ</string></property>
+                   <property name="minimumSize"><size><width>78</width><height>0</height></size></property>
+                   <property name="styleSheet"><string notr="true">font-weight: 700; letter-spacing: 1px; color: #aeb4be;</string></property>
+                  </widget>
+                 </item>
+            <item>
+                  <widget class="QComboBox" name="simpleCaptureMode">
+                   <property name="minimumSize"><size><width>132</width><height>0</height></size></property>
+                   <item><property name="text"><string>Экран</string></property></item>
+                   <item><property name="text"><string>Игра</string></property></item>
+                   <item><property name="text"><string>Окно</string></property></item>
+                   <item><property name="text"><string>Область</string></property></item>
+                  </widget>
+                 </item>
+            <item>
+                  <widget class="QPushButton" name="simpleCaptureSourceButton">
+                   <property name="text"><string>Добавить</string></property>
+                   <property name="toolTip"><string>Выбрать или настроить источник захвата в OBS</string></property>
+                  </widget>
+                 </item>
+            <item>
+                  <widget class="QPushButton" name="simplePreviewButton">
+                   <property name="text"><string>Предпросмотр</string></property>
+                   <property name="checkable"><bool>true</bool></property>
+                   <property name="checked"><bool>false</bool></property>
+                   <property name="toolTip"><string>Показать или скрыть окно предпросмотра</string></property>
+                  </widget>
+                 </item>
+            <item>
+                 <widget class="QPushButton" name="simpleRecordingsButton">
+                  <property name="text"><string>Записи</string></property>
+                  <property name="toolTip"><string>Открыть последние записи и папку сохранения</string></property>
+                 </widget>
+                </item>
+            <item>
+                  <spacer name="simpleRecorderSpacer">
+                   <property name="orientation"><enum>Qt::Orientation::Horizontal</enum></property>
+                   <property name="sizeHint" stdset="0"><size><width>24</width><height>20</height></size></property>
+                  </spacer>
+                 </item>
+           </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="simpleRecorderBottomLayout">
+            <item>
+                  <widget class="QPushButton" name="simpleMicButton">
+                   <property name="text"><string>Микрофон</string></property>
+                   <property name="checkable"><bool>true</bool></property>
+                   <property name="checked"><bool>true</bool></property>
+                   <property name="toolTip"><string>Включить или выключить микрофон через аудиомикшер OBS</string></property>
+                  </widget>
+                 </item>
+            <item>
+                  <widget class="QPushButton" name="simpleSystemAudioButton">
+                   <property name="text"><string>Система</string></property>
+                   <property name="checkable"><bool>true</bool></property>
+                   <property name="checked"><bool>true</bool></property>
+                   <property name="toolTip"><string>Включить или выключить системный звук через аудиомикшер OBS</string></property>
+                  </widget>
+                 </item>
+            <item>
+                 <widget class="QPushButton" name="simpleStudioModeButton">
+                  <property name="text"><string>Полный интерфейс</string></property>
+                  <property name="checkable"><bool>true</bool></property>
+                  <property name="checked"><bool>false</bool></property>
+                  <property name="toolTip"><string>Переключить компактный режим и полный интерфейс OBS</string></property>
+                 </widget>
+                </item>
+            <item>
+                  <widget class="QPushButton" name="simpleSettingsButton">
+                   <property name="text"><string>Качество</string></property>
+       <property name="toolTip"><string>Формат, качество, энкодер и папка сохранения</string></property>
+                  </widget>
+                 </item>
+            <item>
+                  <widget class="QLabel" name="simpleRecordStatus">
+                   <property name="text"><string>ГОТОВ К ЗАПИСИ</string></property>
+                   <property name="minimumSize"><size><width>145</width><height>0</height></size></property>
+                   <property name="alignment"><set>Qt::AlignmentFlag::AlignCenter</set></property>
+                   <property name="styleSheet"><string notr="true">color: #aeb4be; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;</string></property>
+                  </widget>
+                 </item>
+            <item>
+                  <widget class="QPushButton" name="simplePauseButton">
+                   <property name="text"><string>Пауза</string></property>
+                   <property name="toolTip"><string>Приостановить или продолжить запись</string></property>
+                   <property name="visible"><bool>false</bool></property>
+                  </widget>
+                 </item>
+            <item>
+                  <widget class="QPushButton" name="simpleRecordButton">
+                   <property name="text"><string>●  Начать запись</string></property>
+                   <property name="toolTip"><string>Начать или остановить запись</string></property>
+                  </widget>
+                 </item>
+           </layout>
+     </item>
+    </layout>
+   </widget>
+</item>
+<item>
      <widget class="QWidget" name="canvasEditor">
       <layout class="QHBoxLayout" name="previewLayout">
        <property name="spacing">
@@ -708,6 +829,7 @@
     </item>
    </layout>
   </widget>
+  
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>

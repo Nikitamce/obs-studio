@@ -936,6 +936,11 @@ OBSBasicSettings::OBSBasicSettings(QWidget *parent)
 	ui->advancedMsg2->setVisible(false);
 }
 
+void OBSBasicSettings::SelectOutputPage()
+{
+	ui->listWidget->setCurrentRow(OUTPUT);
+}
+
 OBSBasicSettings::~OBSBasicSettings()
 {
 	delete ui->filenameFormatting->completer();

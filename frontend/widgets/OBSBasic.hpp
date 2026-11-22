@@ -40,8 +40,11 @@
 #include <util/util.hpp>
 
 #include <QAccessible>
+#include <QByteArray>
+#include <QElapsedTimer>
 #include <QPointer>
 #include <QSystemTrayIcon>
+#include <QSize>
 
 #include <deque>
 
@@ -54,6 +57,7 @@ class OBSBasicFilters;
 class OBSBasicInteraction;
 class OBSBasicProperties;
 class OBSBasicSourceSelect;
+class QTimer;
 class OBSBasicTransform;
 class OBSLogViewer;
 class OBSMissingFiles;
@@ -263,8 +267,16 @@ private:
 	std::string patronJson;
 
 	std::unique_ptr<Ui::OBSBasic> ui;
+	QPointer<QTimer> simpleRecordTimer;
+	QElapsedTimer simpleRecordingClock;
+	qint64 simpleRecordingElapsedMs = 0;
+	QSize simpleStudioWindowSize;
+	bool simpleStudioMode = true;
+	QByteArray simpleStudioDockState;
+	bool simpleStudioDockStateSaved = false;
 
 	void OnEvent(enum obs_frontend_event event);
+	void ShowSettingsDialog(bool outputPage);
 
 	bool InitBasicConfigDefaults();
 	void InitBasicConfigDefaults2();
@@ -293,6 +305,9 @@ public slots:
 	void UpdateEditMenu();
 	void applicationShutdown() noexcept;
 	void toggleMixerLayout();
+	void SetupSimpleRecorderUi();
+	void AddSimpleCaptureSource();
+	void SetSimpleRecorderMode(bool studioMode);
 
 public:
 	/* `undo_s` needs to be declared after `ui` to prevent an uninitialized
@@ -624,6 +639,7 @@ private slots:
 	void on_actionFullscreenInterface_triggered();
 	void on_actionRemux_triggered();
 	void on_action_Settings_triggered();
+	void on_action_RecordingSettings_triggered();
 	void on_actionShowMacPermissions_triggered();
 	void on_actionShowLogs_triggered();
 	void on_actionUploadCurrentLog_triggered();
