@@ -93,6 +93,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include "Windows.h"
+#include <objbase.h>
 #include <ShObjIdl.h>
 #endif
 
@@ -2281,7 +2282,7 @@ void OBSBasic::SetupSimpleRecorderUi()
 				QStringLiteral("*.ts"),   QStringLiteral("*.avi"),  QStringLiteral("*.webm"),
 				QStringLiteral("*.wmv"),  QStringLiteral("*.ogv"),  QStringLiteral("*.3gp")};
 			const QFileInfoList files =
-				directory.entryInfoList(filters, QDir::Files | QDir::Readable, QDir::Time);
+				directory.entryInfoList(filters, QDir::Files | QDir::Readable, QDir::Time | QDir::Reversed);
 			QFileIconProvider iconProvider;
 			int added = 0;
 			for (const QFileInfo &info : files) {
