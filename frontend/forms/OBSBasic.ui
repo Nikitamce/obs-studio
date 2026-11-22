@@ -144,13 +144,14 @@
                 </item>
             <item>
                   <widget class="QPushButton" name="simpleSettingsButton">
-                   <property name="text"><string>Настройки</string></property>
+                   <property name="text"><string>Качество</string></property>
+       <property name="toolTip"><string>Формат, качество, энкодер и папка сохранения</string></property>
                   </widget>
                  </item>
             <item>
                   <widget class="QLabel" name="simpleRecordStatus">
                    <property name="text"><string>ГОТОВ К ЗАПИСИ</string></property>
-                   <property name="minimumSize"><size><width>112</width><height>0</height></size></property>
+                   <property name="minimumSize"><size><width>145</width><height>0</height></size></property>
                    <property name="alignment"><set>Qt::AlignmentFlag::AlignCenter</set></property>
                    <property name="styleSheet"><string notr="true">color: #aeb4be; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;</string></property>
                   </widget>
