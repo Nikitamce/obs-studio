@@ -2258,10 +2258,15 @@ void OBSBasic::SetSimpleRecorderMode(bool studioMode)
 	ui->canvasEditor->setVisible(previewVisible);
 	ui->contextContainer->setVisible(previewVisible);
 	ui->simplePreviewButton->setVisible(!studioMode);
+	ui->menubar->setVisible(studioMode);
 
 	ui->simpleStudioModeButton->setText(studioMode ? QStringLiteral("Простой режим")
 									 : QStringLiteral("Студийный режим"));
 	setWindowTitle(studioMode ? QStringLiteral("OBS Studio") : QStringLiteral("OBS Recorder"));
+
+	// In recorder mode keep the main window close to a compact Bandicam-style
+	// control panel. Showing preview or restoring studio mode expands it again.
+	resize(width(), previewVisible ? 760 : 150);
 
 	auto syncAudioButton = [](QPushButton *button, uint32_t channel, const QString &label) {
 		OBSSourceAutoRelease source(obs_get_output_source(channel));
