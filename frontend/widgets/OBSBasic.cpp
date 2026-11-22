@@ -2100,3 +2100,40 @@ void OBSBasic::on_actionOpenPluginManager_triggered()
 {
 	App()->pluginManagerOpenDialog();
 }
+
+
+void OBSBasic::SetupSimpleRecorderUi()
+{
+	// Preserve OBS capture backends and output handlers; this toolbar is a
+	// recorder-first entry point over the existing OBS frontend.
+	auto *bar = ui->simpleRecorderBar;
+	if (!bar)
+		return;
+
+	bar->setVisible(true);
+	bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+	connect(ui->simpleSettingsButton, &QPushButton::clicked, this, &OBSBasic::on_action_Settings_triggered);
+	connect(ui->simpleCaptureSourceButton, &QPushButton::clicked, this, [this]() {
+		ui->sourcesDock->show();
+		ui->sourcesDock->raise();
+		ui->actionAddSource->trigger();
+	});
+	connect(ui->simpleRecordButton, &QPushButton::clicked, this, [this]() {
+		RecordActionTriggered();
+	});
+
+	// In this first pass audio toggles are intentionally informational:
+	// muting an arbitrary mixer channel would be unsafe without explicit
+	// source-to-control mapping.
+	ui->simpleMicButton->setToolTip(QStringLiteral("Управление микрофоном — через аудиомикшер OBS"));
+	ui->simpleSystemAudioButton->setToolTip(QStringLiteral("Управление системным звуком — через аудиомикшер OBS"));
+
+	// Keep the recording workspace uncluttered. Hidden docks remain available
+	// through the existing Docks menu and their state is still managed by OBS.
+	ui->scenesDock->hide();
+	ui->sourcesDock->hide();
+	ui->transitionsDock->hide();
+	ui->mixerDock->hide();
+	setWindowTitle(QStringLiteral("OBS Recorder"));
+}
