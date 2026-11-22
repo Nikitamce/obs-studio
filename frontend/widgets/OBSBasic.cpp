@@ -2428,9 +2428,12 @@ void OBSBasic::SetupSimpleRecorderUi()
 		const bool active = RecordingActive();
 		const bool paused = active && isRecordingPausable && outputHandler && outputHandler->fileOutput &&
 				    obs_output_paused(outputHandler->fileOutput);
-		const uint32_t hours = simpleRecordingSeconds / 3600;
-		const uint32_t minutes = (simpleRecordingSeconds / 60) % 60;
-		const uint32_t seconds = simpleRecordingSeconds % 60;
+		const qint64 elapsedMs =
+			simpleRecordingElapsedMs + (simpleRecordingClock.isValid() ? simpleRecordingClock.elapsed() : 0);
+		const uint64_t totalSeconds = static_cast<uint64_t>(std::max<qint64>(0, elapsedMs) / 1000);
+		const uint32_t hours = static_cast<uint32_t>(totalSeconds / 3600);
+		const uint32_t minutes = static_cast<uint32_t>((totalSeconds / 60) % 60);
+		const uint32_t seconds = static_cast<uint32_t>(totalSeconds % 60);
 		const QString elapsed = QString::asprintf("%02u:%02u:%02u", hours, minutes, seconds);
 
 		ui->simpleRecordButton->setText(active ? QStringLiteral("■  Остановить запись")
@@ -2448,25 +2451,29 @@ void OBSBasic::SetupSimpleRecorderUi()
 							      : QStringLiteral("Ⅱ  Пауза"));
 	};
 
-	connect(simpleRecordTimer, &QTimer::timeout, this, [this, updateRecordButton]() {
-		++simpleRecordingSeconds;
-		updateRecordButton();
-	});
+	connect(simpleRecordTimer, &QTimer::timeout, this, updateRecordButton);
 	connect(this, &OBSBasic::RecordingStarted, this, [this, updateRecordButton]() {
-		simpleRecordingSeconds = 0;
+		simpleRecordingElapsedMs = 0;
+		simpleRecordingClock.start();
 		simpleRecordTimer->start();
 		updateRecordButton();
 	});
 	connect(this, &OBSBasic::RecordingStopped, this, [this, updateRecordButton]() {
 		simpleRecordTimer->stop();
-		simpleRecordingSeconds = 0;
+		simpleRecordingClock.invalidate();
+		simpleRecordingElapsedMs = 0;
 		updateRecordButton();
 	});
 	connect(this, &OBSBasic::RecordingPaused, this, [this, updateRecordButton]() {
+		if (simpleRecordingClock.isValid()) {
+			simpleRecordingElapsedMs += simpleRecordingClock.elapsed();
+			simpleRecordingClock.invalidate();
+		}
 		simpleRecordTimer->stop();
 		updateRecordButton();
 	});
 	connect(this, &OBSBasic::RecordingUnpaused, this, [this, updateRecordButton]() {
+		simpleRecordingClock.start();
 		simpleRecordTimer->start();
 		updateRecordButton();
 	});
