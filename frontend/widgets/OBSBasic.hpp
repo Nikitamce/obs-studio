@@ -293,6 +293,7 @@ public slots:
 	void UpdateEditMenu();
 	void applicationShutdown() noexcept;
 	void toggleMixerLayout();
+	void SetupSimpleRecorderUi();
 
 public:
 	/* `undo_s` needs to be declared after `ui` to prevent an uninitialized
