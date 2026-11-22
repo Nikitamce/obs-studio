@@ -2550,6 +2550,8 @@ void OBSBasic::AddSimpleCaptureSource()
 		obs_data_set_int(wrapper.Get(), "item_id", obs_sceneitem_get_id(sceneItem));
 		obs_data_set_string(wrapper.Get(), "name", sourceName.c_str());
 		obs_data_set_bool(wrapper.Get(), "visible", true);
+		OBSDataAutoRelease savedSourceSettings = obs_source_get_settings(source.Get());
+		obs_data_set_obj(wrapper.Get(), "settings", savedSourceSettings.Get());
 
 		auto undo = [sceneUuid](const std::string &uuid) {
 			OBSBasic *main = OBSBasic::Get();
@@ -2571,8 +2573,9 @@ void OBSBasic::AddSimpleCaptureSource()
 			const char *savedId = obs_get_latest_input_type_id(obs_data_get_string(saved.Get(), "id"));
 			if (!savedId)
 				return;
-			OBSSourceAutoRelease restored(
-				obs_source_create(savedId, obs_data_get_string(saved.Get(), "name"), nullptr, nullptr));
+			OBSDataAutoRelease savedSourceSettings = obs_data_get_obj(saved.Get(), "settings");
+			OBSSourceAutoRelease restored(obs_source_create(
+				savedId, obs_data_get_string(saved.Get(), "name"), savedSourceSettings.Get(), nullptr));
 			if (!restored)
 				return;
 
@@ -2580,8 +2583,11 @@ void OBSBasic::AddSimpleCaptureSource()
 			if (!currentScene)
 				return;
 			obs_sceneitem_t *restoredItem = obs_scene_add(currentScene.Get(), restored.Get());
-			if (restoredItem)
+			if (restoredItem) {
 				obs_sceneitem_set_id(restoredItem, static_cast<int64_t>(obs_data_get_int(saved.Get(), "item_id")));
+				obs_sceneitem_set_visible(restoredItem, obs_data_get_bool(saved.Get(), "visible"));
+				obs_sceneitem_select(restoredItem, true);
+			}
 		};
 		undo_s.add_action(QTStr("Undo.Add").arg(QString::fromStdString(sourceName)), undo, redo,
 				  std::string(sourceUuidRaw), std::string(obs_data_get_json(wrapper.Get())));
