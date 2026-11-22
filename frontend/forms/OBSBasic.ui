@@ -708,6 +708,79 @@
     </item>
    </layout>
   </widget>
+  <widget class="QFrame" name="simpleRecorderBar">
+   <property name="minimumSize">
+    <size><width>0</width><height>76</height></size>
+   </property>
+   <property name="maximumSize">
+    <size><width>16777215</width><height>76</height></size>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">QFrame#simpleRecorderBar { background: #202124; border: 1px solid #34363a; border-radius: 10px; } QLabel { color: #f1f3f4; } QPushButton { background: #303238; color: #f4f5f7; border: 1px solid #45474d; border-radius: 7px; padding: 8px 14px; min-height: 20px; } QPushButton:hover { background: #3b3e45; } QPushButton:pressed { background: #292b30; } QPushButton#simpleRecordButton { background: #d93645; border: 1px solid #ee6570; color: white; font-weight: 700; min-width: 116px; } QPushButton#simpleRecordButton:hover { background: #eb4654; } QComboBox { background: #303238; color: #f4f5f7; border: 1px solid #45474d; border-radius: 7px; padding: 7px 10px; min-height: 22px; }</string>
+   </property>
+   <layout class="QHBoxLayout" name="simpleRecorderLayout">
+    <property name="leftMargin"><number>14</number></property>
+    <property name="topMargin"><number>10</number></property>
+    <property name="rightMargin"><number>14</number></property>
+    <property name="bottomMargin"><number>10</number></property>
+    <property name="spacing"><number>10</number></property>
+    <item>
+     <widget class="QLabel" name="simpleRecorderTitle">
+      <property name="text"><string>ЗАПИСЬ</string></property>
+      <property name="minimumSize"><size><width>78</width><height>0</height></size></property>
+      <property name="styleSheet"><string notr="true">font-weight: 700; letter-spacing: 1px; color: #aeb4be;</string></property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QComboBox" name="simpleCaptureMode">
+      <property name="minimumSize"><size><width>132</width><height>0</height></size></property>
+      <item><property name="text"><string>Экран</string></property></item>
+      <item><property name="text"><string>Игра</string></property></item>
+      <item><property name="text"><string>Окно</string></property></item>
+      <item><property name="text"><string>Область</string></property></item>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="simpleCaptureSourceButton">
+      <property name="text"><string>Выбрать источник</string></property>
+      <property name="toolTip"><string>Выбрать или настроить источник захвата в OBS</string></property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="simpleMicButton">
+      <property name="text"><string>Микрофон</string></property>
+      <property name="checkable"><bool>true</bool></property>
+      <property name="checked"><bool>true</bool></property>
+      <property name="toolTip"><string>Включить или выключить микрофон через аудиомикшер OBS</string></property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="simpleSystemAudioButton">
+      <property name="text"><string>Системный звук</string></property>
+      <property name="checkable"><bool>true</bool></property>
+      <property name="checked"><bool>true</bool></property>
+      <property name="toolTip"><string>Включить или выключить системный звук через аудиомикшер OBS</string></property>
+     </widget>
+    </item>
+    <item>
+     <spacer name="simpleRecorderSpacer">
+      <property name="orientation"><enum>Qt::Orientation::Horizontal</enum></property>
+      <property name="sizeHint" stdset="0"><size><width>24</width><height>20</height></size></property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QPushButton" name="simpleSettingsButton">
+      <property name="text"><string>Настройки</string></property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="simpleRecordButton">
+      <property name="text"><string>●  Начать запись</string></property>
+      <property name="toolTip"><string>Начать или остановить запись</string></property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
