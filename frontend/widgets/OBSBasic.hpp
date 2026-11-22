@@ -295,6 +295,7 @@ public slots:
 	void toggleMixerLayout();
 	void SetupSimpleRecorderUi();
 	void AddSimpleCaptureSource();
+	void SetSimpleRecorderMode(bool studioMode);
 
 public:
 	/* `undo_s` needs to be declared after `ui` to prevent an uninitialized
