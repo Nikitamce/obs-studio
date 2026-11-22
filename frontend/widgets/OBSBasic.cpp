@@ -2126,11 +2126,10 @@ void OBSBasic::SetupSimpleRecorderUi()
 		RecordActionTriggered();
 	});
 	connect(ui->simpleStudioModeButton, &QPushButton::toggled, this, &OBSBasic::SetSimpleRecorderMode);
-	connect(ui->simplePreviewButton, &QPushButton::toggled, this, [this](bool visible) {
+	connect(ui->simplePreviewButton, &QPushButton::toggled, this, [this](bool) {
 		if (ui->simpleStudioModeButton->isChecked())
 			return;
-		ui->canvasEditor->setVisible(visible);
-		ui->contextContainer->setVisible(visible);
+		SetSimpleRecorderMode(false);
 	});
 
 	auto updateRecordButton = [this]() {
@@ -2251,6 +2250,10 @@ void OBSBasic::AddSimpleCaptureSource()
 		return;
 	}
 
+	// Select the new source in OBS so preview transforms (including Alt-drag
+	// cropping in Area mode) target the source the user just added.
+	obs_sceneitem_select(sceneItem, true);
+
 	// Register the operation in OBS's native undo stack so Ctrl+Z and redo
 	// behave exactly as they do for sources created in the standard picker.
 	OBSSource currentSceneSource = GetCurrentSceneSource();
@@ -2340,7 +2343,7 @@ void OBSBasic::SetSimpleRecorderMode(bool studioMode)
 
 	// In recorder mode keep the main window close to a compact Bandicam-style
 	// control panel. Showing preview or restoring studio mode expands it again.
-	resize(width(), previewVisible ? 760 : 150);
+	resize(960, previewVisible ? 760 : 180);
 
 	auto syncAudioButton = [](QPushButton *button, uint32_t channel, const QString &label) {
 		QSignalBlocker signalBlocker(button);
