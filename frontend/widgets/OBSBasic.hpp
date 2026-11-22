@@ -42,6 +42,7 @@
 #include <QAccessible>
 #include <QPointer>
 #include <QSystemTrayIcon>
+#include <QSize>
 
 #include <deque>
 
@@ -54,6 +55,7 @@ class OBSBasicFilters;
 class OBSBasicInteraction;
 class OBSBasicProperties;
 class OBSBasicSourceSelect;
+class QTimer;
 class OBSBasicTransform;
 class OBSLogViewer;
 class OBSMissingFiles;
