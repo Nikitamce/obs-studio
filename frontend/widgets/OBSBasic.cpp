@@ -2118,7 +2118,7 @@ void OBSBasic::SetupSimpleRecorderUi()
 	bar->setVisible(true);
 	bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-	connect(ui->simpleSettingsButton, &QPushButton::clicked, this, &OBSBasic::on_action_Settings_triggered);
+	connect(ui->simpleSettingsButton, &QPushButton::clicked, this, &OBSBasic::on_action_RecordingSettings_triggered);
 	connect(ui->simpleRecordingsButton, &QPushButton::clicked, this, [this]() {
 		on_actionShow_Recordings_triggered();
 	});
