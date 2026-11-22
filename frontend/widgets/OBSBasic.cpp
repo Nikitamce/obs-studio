@@ -29,6 +29,7 @@
 #include <obs-module.h>
 
 #include <QMessageBox>
+#include <QTimer>
 
 #ifdef YOUTUBE_ENABLED
 #include <docks/YouTubeAppDock.hpp>
@@ -2132,16 +2133,23 @@ void OBSBasic::SetupSimpleRecorderUi()
 		SetSimpleRecorderMode(false);
 	});
 
+	simpleRecordTimer = new QTimer(this);
+	simpleRecordTimer->setInterval(1000);
+
 	auto updateRecordButton = [this]() {
 		const bool active = RecordingActive();
 		const bool paused = active && isRecordingPausable && outputHandler && outputHandler->fileOutput &&
 				    obs_output_paused(outputHandler->fileOutput);
+		const uint32_t hours = simpleRecordingSeconds / 3600;
+		const uint32_t minutes = (simpleRecordingSeconds / 60) % 60;
+		const uint32_t seconds = simpleRecordingSeconds % 60;
+		const QString elapsed = QString::asprintf("%02u:%02u:%02u", hours, minutes, seconds);
 
 		ui->simpleRecordButton->setText(active ? QStringLiteral("■  Остановить запись")
 							       : QStringLiteral("●  Начать запись"));
-		ui->simpleRecordStatus->setText(paused ? QStringLiteral("ПАУЗА")
-							: active ? QStringLiteral("●  ИДЁТ ЗАПИСЬ")
-								 : QStringLiteral("ГОТОВ К ЗАПИСИ"));
+		ui->simpleRecordStatus->setText(
+			paused ? QStringLiteral("ПАУЗА  ") + elapsed
+			       : active ? QStringLiteral("● REC  ") + elapsed : QStringLiteral("ГОТОВ К ЗАПИСИ"));
 		ui->simpleRecordStatus->setStyleSheet(
 			active ? QStringLiteral("color: #ff6874; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;")
 			       : QStringLiteral("color: #aeb4be; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;"));
@@ -2151,10 +2159,29 @@ void OBSBasic::SetupSimpleRecorderUi()
 		ui->simplePauseButton->setText(paused ? QStringLiteral("▶  Продолжить")
 							      : QStringLiteral("Ⅱ  Пауза"));
 	};
-	connect(this, &OBSBasic::RecordingStarted, this, updateRecordButton);
-	connect(this, &OBSBasic::RecordingStopped, this, updateRecordButton);
-	connect(this, &OBSBasic::RecordingPaused, this, updateRecordButton);
-	connect(this, &OBSBasic::RecordingUnpaused, this, updateRecordButton);
+
+	connect(simpleRecordTimer, &QTimer::timeout, this, [this, updateRecordButton]() {
+		++simpleRecordingSeconds;
+		updateRecordButton();
+	});
+	connect(this, &OBSBasic::RecordingStarted, this, [this, updateRecordButton]() {
+		simpleRecordingSeconds = 0;
+		simpleRecordTimer->start();
+		updateRecordButton();
+	});
+	connect(this, &OBSBasic::RecordingStopped, this, [this, updateRecordButton]() {
+		simpleRecordTimer->stop();
+		simpleRecordingSeconds = 0;
+		updateRecordButton();
+	});
+	connect(this, &OBSBasic::RecordingPaused, this, [this, updateRecordButton]() {
+		simpleRecordTimer->stop();
+		updateRecordButton();
+	});
+	connect(this, &OBSBasic::RecordingUnpaused, this, [this, updateRecordButton]() {
+		simpleRecordTimer->start();
+		updateRecordButton();
+	});
 	connect(ui->simplePauseButton, &QPushButton::clicked, this, [this]() {
 		RecordPauseToggled();
 	});
