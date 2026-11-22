@@ -168,6 +168,21 @@ void AddSimpleRecorderSceneItem(void *data, obs_scene_t *scene)
 }
 
 #ifdef _WIN32
+bool IsSimpleRecorderInputRegistered(const char *unversionedId)
+{
+	if (!unversionedId)
+		return false;
+
+	for (size_t index = 0;; ++index) {
+		const char *versionedId = nullptr;
+		const char *registeredUnversionedId = nullptr;
+		if (!obs_enum_input_types2(index, &versionedId, &registeredUnversionedId))
+			return false;
+		if (registeredUnversionedId && strcmp(registeredUnversionedId, unversionedId) == 0)
+			return true;
+	}
+}
+
 QThreadPool &RecordingThumbnailPool()
 {
 	static QThreadPool pool;
@@ -2558,10 +2573,16 @@ void OBSBasic::AddSimpleCaptureSource()
 		sourceName = std::string(baseName) + " (" + std::to_string(suffix) + ")";
 	}
 
+	if (!IsSimpleRecorderInputRegistered(sourceId)) {
+		QMessageBox::warning(this, QStringLiteral("Источник недоступен"),
+				     QStringLiteral("Модуль захвата Windows не зарегистрировал выбранный тип источника."));
+		return;
+	}
+
 	const char *latestSourceId = obs_get_latest_input_type_id(sourceId);
 	if (!latestSourceId) {
 		QMessageBox::warning(this, QStringLiteral("Источник недоступен"),
-				     QStringLiteral("Выбранный тип захвата не зарегистрирован в этой сборке OBS."));
+				     QStringLiteral("Не удалось определить актуальную версию типа захвата."));
 		return;
 	}
 
