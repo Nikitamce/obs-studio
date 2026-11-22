@@ -62,7 +62,7 @@
      <size><width>16777215</width><height>76</height></size>
     </property>
     <property name="styleSheet">
-     <string notr="true">QFrame#simpleRecorderBar { background: #202124; border: 1px solid #34363a; border-radius: 10px; } QLabel { color: #f1f3f4; } QPushButton { background: #303238; color: #f4f5f7; border: 1px solid #45474d; border-radius: 7px; padding: 8px 14px; min-height: 20px; } QPushButton:hover { background: #3b3e45; } QPushButton:checked { background: #245e49; border-color: #3b8e6d; } QPushButton:disabled { color: #777d87; background: #27292e; } QPushButton:pressed { background: #292b30; } QPushButton#simpleRecordButton { background: #d93645; border: 1px solid #ee6570; color: white; font-weight: 700; min-width: 116px; } QPushButton#simpleRecordButton:hover { background: #eb4654; } QComboBox { background: #303238; color: #f4f5f7; border: 1px solid #45474d; border-radius: 7px; padding: 7px 10px; min-height: 22px; }</string>
+     <string notr="true">QFrame#simpleRecorderBar { background: #202124; border: 1px solid #34363a; border-radius: 10px; } QLabel { color: #f1f3f4; } QLabel#simpleRecordStatus { background: #2b3036; border-radius: 6px; padding: 6px 10px; } QPushButton { background: #303238; color: #f4f5f7; border: 1px solid #45474d; border-radius: 7px; padding: 8px 14px; min-height: 20px; } QPushButton:hover { background: #3b3e45; } QPushButton:checked { background: #245e49; border-color: #3b8e6d; } QPushButton:disabled { color: #777d87; background: #27292e; } QPushButton:pressed { background: #292b30; } QPushButton#simpleRecordButton { background: #d93645; border: 1px solid #ee6570; color: white; font-weight: 700; min-width: 116px; } QPushButton#simpleRecordButton:hover { background: #eb4654; } QComboBox { background: #303238; color: #f4f5f7; border: 1px solid #45474d; border-radius: 7px; padding: 7px 10px; min-height: 22px; }</string>
     </property>
     <layout class="QHBoxLayout" name="simpleRecorderLayout">
      <property name="leftMargin"><number>14</number></property>
@@ -139,6 +139,14 @@
     <item>
       <widget class="QPushButton" name="simpleSettingsButton">
        <property name="text"><string>Настройки</string></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="simpleRecordStatus">
+       <property name="text"><string>ГОТОВ К ЗАПИСИ</string></property>
+       <property name="minimumSize"><size><width>112</width><height>0</height></size></property>
+       <property name="alignment"><set>Qt::AlignmentFlag::AlignCenter</set></property>
+       <property name="styleSheet"><string notr="true">color: #aeb4be; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;</string></property>
       </widget>
      </item>
      <item>
