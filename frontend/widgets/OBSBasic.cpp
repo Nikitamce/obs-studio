@@ -2642,7 +2642,7 @@ void OBSBasic::AddSimpleCaptureSource()
 	if (sceneUuidRaw && sourceUuidRaw) {
 		const std::string sceneUuid(sceneUuidRaw);
 		OBSDataAutoRelease wrapper(obs_data_create());
-		obs_data_set_string(wrapper.Get(), "id", latestSourceId);
+		obs_data_set_string(wrapper.Get(), "id", sourceId);
 		obs_data_set_int(wrapper.Get(), "item_id", obs_sceneitem_get_id(sceneItem));
 		obs_data_set_string(wrapper.Get(), "name", sourceName.c_str());
 		obs_data_set_bool(wrapper.Get(), "visible", true);
