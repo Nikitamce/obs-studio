@@ -263,6 +263,8 @@ private:
 	std::string patronJson;
 
 	std::unique_ptr<Ui::OBSBasic> ui;
+	QPointer<QTimer> simpleRecordTimer;
+	uint32_t simpleRecordingSeconds = 0;
 
 	void OnEvent(enum obs_frontend_event event);
 
