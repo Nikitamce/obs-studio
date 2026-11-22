@@ -146,6 +146,33 @@ QThreadPool &RecordingThumbnailPool()
 	return pool;
 }
 
+QImage CreateVideoPlaceholder(const QString &extension)
+{
+	QImage image(320, 180, QImage::Format_ARGB32_Premultiplied);
+	image.fill(QColor("#20242b"));
+
+	QPainter painter(&image);
+	painter.setRenderHint(QPainter::Antialiasing, true);
+	painter.setPen(Qt::NoPen);
+	painter.setBrush(QColor("#303844"));
+	painter.drawRoundedRect(QRectF(8, 8, 304, 164), 12, 12);
+	painter.setBrush(QColor("#485464"));
+	painter.drawEllipse(QRectF(128, 50, 64, 64));
+
+	QPolygonF playButton;
+	playButton << QPointF(153, 64) << QPointF(153, 100) << QPointF(181, 82);
+	painter.setBrush(QColor("#f3f5f8"));
+	painter.drawPolygon(playButton);
+
+	QFont font = painter.font();
+	font.setBold(true);
+	font.setPointSize(10);
+	painter.setFont(font);
+	painter.setPen(QColor("#aeb7c4"));
+	painter.drawText(QRect(16, 137, 288, 22), Qt::AlignRight | Qt::AlignVCenter, extension.toUpper());
+	return image;
+}
+
 QImage LoadShellVideoThumbnail(const QString &filePath)
 {
 	QImage image;
