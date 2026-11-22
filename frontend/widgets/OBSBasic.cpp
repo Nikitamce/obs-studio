@@ -2260,8 +2260,9 @@ void OBSBasic::SetupSimpleRecorderUi()
 		layout->addWidget(empty);
 		layout->addLayout(buttons);
 
-		auto refreshList = [list, empty, recordingPath]() {
+		auto refreshList = [list, empty, recordingPath, openButton]() {
 			list->clear();
+			openButton->setEnabled(false);
 			if (recordingPath.isEmpty()) {
 				empty->setText(QStringLiteral(
 					"Папка записей не настроена. Откройте настройки качества и укажите путь сохранения."));
@@ -2321,7 +2322,7 @@ void OBSBasic::SetupSimpleRecorderUi()
 							}
 						}
 					}, Qt::QueuedConnection);
-				}));
+				}), QThread::LowPriority);
 #endif
 				++added;
 			}
