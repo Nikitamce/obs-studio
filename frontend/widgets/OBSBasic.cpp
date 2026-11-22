@@ -19,7 +19,6 @@
 
 #include "OBSBasic.hpp"
 
-#include <QMessageBox>
 #include "ui-config.h"
 
 #include "ColorSelect.hpp"
@@ -28,6 +27,8 @@
 #include "plugin-manager/PluginManager.hpp"
 
 #include <obs-module.h>
+
+#include <QMessageBox>
 
 #ifdef YOUTUBE_ENABLED
 #include <docks/YouTubeAppDock.hpp>
@@ -1241,6 +1242,7 @@ void OBSBasic::OBSInit()
 	}
 
 	UpdatePreviewProgramIndicators();
+	SetSimpleRecorderMode(ui->simpleStudioModeButton->isChecked());
 	OnFirstLoad();
 
 	if (!hideWindowOnStart) {
@@ -2106,8 +2108,8 @@ void OBSBasic::on_actionOpenPluginManager_triggered()
 
 void OBSBasic::SetupSimpleRecorderUi()
 {
-	// Keep OBS's capture backends and output handlers; this is a simpler
-	// recorder-first workspace over the existing OBS frontend.
+	// Keep OBS's capture backends and output handlers; this is a recorder-first
+	// workspace layered over the existing OBS frontend.
 	auto *bar = ui->simpleRecorderBar;
 	if (!bar)
 		return;
@@ -2122,6 +2124,13 @@ void OBSBasic::SetupSimpleRecorderUi()
 	connect(ui->simpleCaptureSourceButton, &QPushButton::clicked, this, &OBSBasic::AddSimpleCaptureSource);
 	connect(ui->simpleRecordButton, &QPushButton::clicked, this, [this]() {
 		RecordActionTriggered();
+	});
+	connect(ui->simpleStudioModeButton, &QPushButton::toggled, this, &OBSBasic::SetSimpleRecorderMode);
+	connect(ui->simplePreviewButton, &QPushButton::toggled, this, [this](bool visible) {
+		if (ui->simpleStudioModeButton->isChecked())
+			return;
+		ui->canvasEditor->setVisible(visible);
+		ui->contextContainer->setVisible(visible);
 	});
 
 	auto updateRecordButton = [this]() {
@@ -2138,49 +2147,25 @@ void OBSBasic::SetupSimpleRecorderUi()
 	updateRecordButton();
 
 	// OBS output channels 1 and 3 are the configured desktop and microphone
-	// buses respectively. Disable shortcuts when the user has not configured
-	// a device rather than muting an unrelated source.
-	auto setupAudioToggle = [this](QPushButton *button, uint32_t channel, const QString &label) {
-		OBSSourceAutoRelease source(obs_get_output_source(channel));
-		if (!source) {
-			button->setEnabled(false);
-			button->setChecked(false);
-			button->setText(label + QStringLiteral(" — не настроен"));
-			return;
-		}
-
-		button->setEnabled(true);
-		button->setChecked(!obs_source_muted(source.Get()));
-		button->setText(obs_source_muted(source.Get()) ? label + QStringLiteral(" — выкл.") : label);
+	// buses. A missing device disables its shortcut instead of muting an
+	// unrelated mixer source.
+	auto connectAudioToggle = [this](QPushButton *button, uint32_t channel, const QString &label) {
 		connect(button, &QPushButton::toggled, this, [button, channel, label](bool enabled) {
-			OBSSourceAutoRelease current(obs_get_output_source(channel));
-			if (!current) {
+			OBSSourceAutoRelease source(obs_get_output_source(channel));
+			if (!source) {
 				button->setEnabled(false);
 				return;
 			}
-			obs_source_set_muted(current.Get(), !enabled);
+			obs_source_set_muted(source.Get(), !enabled);
 			button->setText(enabled ? label : label + QStringLiteral(" — выкл."));
 		});
 	};
-	setupAudioToggle(ui->simpleMicButton, 3, QStringLiteral("Микрофон"));
-	setupAudioToggle(ui->simpleSystemAudioButton, 1, QStringLiteral("Системный звук"));
+	connectAudioToggle(ui->simpleMicButton, 3, QStringLiteral("Микрофон"));
+	connectAudioToggle(ui->simpleSystemAudioButton, 1, QStringLiteral("Системный звук"));
 
-	// The classic workspace can be restored at any time. We hide its docks
-	// without deleting them, preserving the existing OBS layout and state.
-	auto setStudioMode = [this](bool studioMode) {
-		ui->scenesDock->setVisible(studioMode);
-		ui->sourcesDock->setVisible(studioMode);
-		ui->transitionsDock->setVisible(studioMode);
-		ui->mixerDock->setVisible(studioMode);
-		if (controlsDock)
-			controlsDock->setVisible(studioMode);
-		ui->simpleStudioModeButton->setText(studioMode ? QStringLiteral("Простой режим")
-										 : QStringLiteral("Студийный режим"));
-		setWindowTitle(studioMode ? QStringLiteral("OBS Studio") : QStringLiteral("OBS Recorder"));
-	};
-	connect(ui->simpleStudioModeButton, &QPushButton::toggled, this, setStudioMode);
+	ui->simplePreviewButton->setChecked(false);
 	ui->simpleStudioModeButton->setChecked(false);
-	setStudioMode(false);
+	SetSimpleRecorderMode(false);
 }
 
 void OBSBasic::AddSimpleCaptureSource()
@@ -2244,15 +2229,55 @@ void OBSBasic::AddSimpleCaptureSource()
 
 	// Open the native properties dialog so the user can select the display,
 	// target window, or game capture method without exposing the full dock UI.
-	CreatePropertiesWindow(source.Get());
-
 	if (mode == 3) {
-		QMessageBox::information(this, QStringLiteral("Настройка области"),
-					 QStringLiteral("Источник экрана добавлен. Чтобы оставить только нужную область, наведите курсор на предпросмотр и удерживайте Alt при перетаскивании границы источника."));
+		ui->simplePreviewButton->setChecked(true);
+		ui->simpleCaptureSourceButton->setToolTip(QStringLiteral(
+			"Для кадрирования удерживайте Alt и перетаскивайте границу источника в предпросмотре."));
+	} else {
+		ui->simpleCaptureSourceButton->setToolTip(QStringLiteral("Добавить выбранный тип захвата"));
 	}
+	CreatePropertiesWindow(source.Get());
 #else
 	// The quick source-type mapping uses the Windows capture source IDs.
 	// On other platforms, fall back to OBS's native source picker.
 	ui->actionAddSource->trigger();
 #endif
+}
+
+
+void OBSBasic::SetSimpleRecorderMode(bool studioMode)
+{
+	ui->scenesDock->setVisible(studioMode);
+	ui->sourcesDock->setVisible(studioMode);
+	ui->transitionsDock->setVisible(studioMode);
+	ui->mixerDock->setVisible(studioMode);
+	if (controlsDock)
+		controlsDock->setVisible(studioMode);
+
+	const bool previewVisible = studioMode || ui->simplePreviewButton->isChecked();
+	ui->canvasEditor->setVisible(previewVisible);
+	ui->contextContainer->setVisible(previewVisible);
+	ui->simplePreviewButton->setVisible(!studioMode);
+
+	ui->simpleStudioModeButton->setText(studioMode ? QStringLiteral("Простой режим")
+									 : QStringLiteral("Студийный режим"));
+	setWindowTitle(studioMode ? QStringLiteral("OBS Studio") : QStringLiteral("OBS Recorder"));
+
+	auto syncAudioButton = [](QPushButton *button, uint32_t channel, const QString &label) {
+		OBSSourceAutoRelease source(obs_get_output_source(channel));
+		if (!source) {
+			button->setEnabled(false);
+			button->setChecked(false);
+			button->setText(label + QStringLiteral(" — не настроен"));
+			return;
+		}
+		button->setEnabled(true);
+		const bool enabled = !obs_source_muted(source.Get());
+		button->setChecked(enabled);
+		button->setText(enabled ? label : label + QStringLiteral(" — выкл."));
+	};
+	if (!studioMode) {
+		syncAudioButton(ui->simpleMicButton, 3, QStringLiteral("Микрофон"));
+		syncAudioButton(ui->simpleSystemAudioButton, 1, QStringLiteral("Системный звук"));
+	}
 }
