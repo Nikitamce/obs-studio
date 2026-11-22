@@ -41,6 +41,7 @@
 
 #include <QAccessible>
 #include <QByteArray>
+#include <QElapsedTimer>
 #include <QPointer>
 #include <QSystemTrayIcon>
 #include <QSize>
@@ -267,7 +268,8 @@ private:
 
 	std::unique_ptr<Ui::OBSBasic> ui;
 	QPointer<QTimer> simpleRecordTimer;
-	uint32_t simpleRecordingSeconds = 0;
+	QElapsedTimer simpleRecordingClock;
+	qint64 simpleRecordingElapsedMs = 0;
 	QSize simpleStudioWindowSize;
 	bool simpleStudioMode = true;
 	QByteArray simpleStudioDockState;
