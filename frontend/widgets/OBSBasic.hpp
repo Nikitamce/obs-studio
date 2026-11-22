@@ -267,6 +267,7 @@ private:
 	uint32_t simpleRecordingSeconds = 0;
 
 	void OnEvent(enum obs_frontend_event event);
+	void ShowSettingsDialog(bool outputPage);
 
 	bool InitBasicConfigDefaults();
 	void InitBasicConfigDefaults2();
@@ -629,6 +630,7 @@ private slots:
 	void on_actionFullscreenInterface_triggered();
 	void on_actionRemux_triggered();
 	void on_action_Settings_triggered();
+	void on_action_RecordingSettings_triggered();
 	void on_actionShowMacPermissions_triggered();
 	void on_actionShowLogs_triggered();
 	void on_actionUploadCurrentLog_triggered();
