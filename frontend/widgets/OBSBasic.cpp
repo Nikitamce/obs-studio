@@ -31,6 +31,7 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QDialog>
+#include <QDialogButtonBox>
 #include <QFileIconProvider>
 #include <QFileInfo>
 #include <QHBoxLayout>
@@ -53,6 +54,7 @@
 #include <dialogs/OBSBasicInteraction.hpp>
 #include <dialogs/OBSBasicProperties.hpp>
 #include <dialogs/OBSBasicTransform.hpp>
+#include <properties-view.hpp>
 #include <models/SceneCollection.hpp>
 #include <settings/OBSBasicSettings.hpp>
 #include <utility/QuickTransition.hpp>
@@ -2380,6 +2382,41 @@ void OBSBasic::AddSimpleCaptureSource()
 		return;
 	}
 
+	// Use OBS's own dynamic properties for monitor/window selection. This
+	// reuses Win-Capture's native device and target enumeration instead of
+	// maintaining a second, potentially stale list in the recorder UI.
+	OBSDataAutoRelease sourceSettings = obs_source_get_settings(source.Get());
+	OBSDataAutoRelease originalSettings = obs_data_create();
+	obs_data_apply(originalSettings.Get(), sourceSettings.Get());
+
+	QDialog setupDialog(this);
+	setupDialog.setWindowTitle(QStringLiteral("Настройка захвата"));
+	setupDialog.resize(560, 420);
+	auto *setupLayout = new QVBoxLayout(&setupDialog);
+	auto *setupLabel = new QLabel(QStringLiteral(
+		"Выберите монитор, окно или способ захвата. Список формируется самим OBS."), &setupDialog);
+	setupLabel->setWordWrap(true);
+	auto *properties = new OBSPropertiesView(sourceSettings.Get(), source.Get(),
+						  (PropertiesReloadCallback)obs_source_properties, nullptr,
+						  (PropertiesVisualUpdateCb)obs_source_update);
+	properties->setMinimumWidth(500);
+	properties->setMinimumHeight(220);
+	auto *setupButtons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &setupDialog);
+	setupButtons->button(QDialogButtonBox::Ok)->setText(QStringLiteral("Добавить источник"));
+	connect(setupButtons, &QDialogButtonBox::accepted, &setupDialog, &QDialog::accept);
+	connect(setupButtons, &QDialogButtonBox::rejected, &setupDialog, &QDialog::reject);
+	setupLayout->addWidget(setupLabel);
+	setupLayout->addWidget(properties, 1);
+	setupLayout->addWidget(setupButtons);
+
+	if (setupDialog.exec() != QDialog::Accepted) {
+		obs_source_update(source.Get(), originalSettings.Get());
+		obs_source_remove(source.Get());
+		return;
+	}
+	if (properties->DeferUpdate())
+		properties->UpdateSettings();
+
 	OBSScene scene = GetCurrentScene();
 	if (!scene) {
 		QMessageBox::warning(this, QStringLiteral("Нет активной сцены"),
@@ -2458,7 +2495,7 @@ void OBSBasic::AddSimpleCaptureSource()
 	} else {
 		ui->simpleCaptureSourceButton->setToolTip(QStringLiteral("Добавить выбранный тип захвата"));
 	}
-	CreatePropertiesWindow(source.Get());
+ 	// The source target was already configured in the compact setup dialog.
 #else
 	// The quick source-type mapping uses the Windows capture source IDs.
 	// On other platforms, fall back to OBS's native source picker.
