@@ -2330,7 +2330,7 @@ void OBSBasic::SetupSimpleRecorderUi()
 				QStringLiteral("*.ts"),   QStringLiteral("*.avi"),  QStringLiteral("*.webm"),
 				QStringLiteral("*.wmv"),  QStringLiteral("*.ogv"),  QStringLiteral("*.3gp")};
 			const QFileInfoList files =
-				directory.entryInfoList(filters, QDir::Files | QDir::Readable, QDir::Time | QDir::Reversed);
+				directory.entryInfoList(filters, QDir::Files | QDir::Readable, QDir::Time);
 			int added = 0;
 			for (const QFileInfo &info : files) {
 				if (added >= 30)
