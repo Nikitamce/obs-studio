@@ -2327,6 +2327,7 @@ void OBSBasic::SetSimpleRecorderMode(bool studioMode)
 	resize(width(), previewVisible ? 760 : 150);
 
 	auto syncAudioButton = [](QPushButton *button, uint32_t channel, const QString &label) {
+		QSignalBlocker signalBlocker(button);
 		OBSSourceAutoRelease source(obs_get_output_source(channel));
 		if (!source) {
 			button->setEnabled(false);
