@@ -2135,12 +2135,20 @@ void OBSBasic::SetupSimpleRecorderUi()
 
 	auto updateRecordButton = [this]() {
 		const bool active = RecordingActive();
+		const bool paused = active && isRecordingPausable && outputHandler && outputHandler->fileOutput &&
+				    obs_output_paused(outputHandler->fileOutput);
+
 		ui->simpleRecordButton->setText(active ? QStringLiteral("■  Остановить запись")
 							       : QStringLiteral("●  Начать запись"));
+		ui->simpleRecordStatus->setText(paused ? QStringLiteral("ПАУЗА")
+							: active ? QStringLiteral("●  ИДЁТ ЗАПИСЬ")
+								 : QStringLiteral("ГОТОВ К ЗАПИСИ"));
+		ui->simpleRecordStatus->setStyleSheet(
+			active ? QStringLiteral("color: #ff6874; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;")
+			       : QStringLiteral("color: #aeb4be; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;"));
+
 		const bool canPause = active && isRecordingPausable;
 		ui->simplePauseButton->setVisible(canPause);
-		const bool paused = canPause && outputHandler && outputHandler->fileOutput &&
-				   obs_output_paused(outputHandler->fileOutput);
 		ui->simplePauseButton->setText(paused ? QStringLiteral("▶  Продолжить")
 							      : QStringLiteral("Ⅱ  Пауза"));
 	};
@@ -2324,6 +2332,7 @@ void OBSBasic::SetSimpleRecorderMode(bool studioMode)
 	ui->contextContainer->setVisible(previewVisible);
 	ui->simplePreviewButton->setVisible(!studioMode);
 	ui->menubar->setVisible(studioMode);
+	ui->statusbar->setVisible(studioMode);
 
 	ui->simpleStudioModeButton->setText(studioMode ? QStringLiteral("Простой режим")
 									 : QStringLiteral("Студийный режим"));
