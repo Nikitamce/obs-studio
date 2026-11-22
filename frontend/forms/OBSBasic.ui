@@ -142,6 +142,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="simplePauseButton">
+       <property name="text"><string>Пауза</string></property>
+       <property name="toolTip"><string>Приостановить или продолжить запись</string></property>
+       <property name="visible"><bool>false</bool></property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="simpleRecordButton">
        <property name="text"><string>●  Начать запись</string></property>
        <property name="toolTip"><string>Начать или остановить запись</string></property>
