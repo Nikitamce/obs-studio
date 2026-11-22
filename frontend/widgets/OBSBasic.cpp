@@ -2137,13 +2137,19 @@ void OBSBasic::SetupSimpleRecorderUi()
 		const bool active = RecordingActive();
 		ui->simpleRecordButton->setText(active ? QStringLiteral("■  Остановить запись")
 							       : QStringLiteral("●  Начать запись"));
+		const bool canPause = active && isRecordingPausable;
+		ui->simplePauseButton->setVisible(canPause);
+		const bool paused = canPause && recordingPaused;
+		ui->simplePauseButton->setText(paused ? QStringLiteral("▶  Продолжить")
+							      : QStringLiteral("Ⅱ  Пауза"));
 	};
 	connect(this, &OBSBasic::RecordingStarted, this, updateRecordButton);
 	connect(this, &OBSBasic::RecordingStopped, this, updateRecordButton);
-	connect(this, &OBSBasic::RecordingPaused, this, [this]() {
-		ui->simpleRecordButton->setText(QStringLiteral("Ⅱ  Запись приостановлена"));
-	});
+	connect(this, &OBSBasic::RecordingPaused, this, updateRecordButton);
 	connect(this, &OBSBasic::RecordingUnpaused, this, updateRecordButton);
+	connect(ui->simplePauseButton, &QPushButton::clicked, this, [this]() {
+		RecordPauseToggled();
+	});
 	updateRecordButton();
 
 	// OBS output channels 1 and 3 are the configured desktop and microphone
