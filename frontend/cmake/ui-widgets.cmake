@@ -12,6 +12,10 @@ target_sources(
   PRIVATE
     widgets/AudioMixer.cpp
     widgets/AudioMixer.hpp
+    widgets/BandicamRecorderWidget.cpp
+    widgets/BandicamRecorderWidget.hpp
+    widgets/BandicamRegionOverlay.cpp
+    widgets/BandicamRegionOverlay.hpp
     widgets/ColorSelect.cpp
     widgets/ColorSelect.hpp
     widgets/OBSBasic.cpp

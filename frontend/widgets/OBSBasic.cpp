@@ -21,6 +21,7 @@
 
 #include "ui-config.h"
 
+#include "BandicamRecorderWidget.hpp"
 #include "ColorSelect.hpp"
 #include "OBSBasicControls.hpp"
 #include "OBSBasicStats.hpp"
@@ -139,132 +140,6 @@ extern void CheckExistingCookieId();
 
 namespace {
 std::once_flag saveOnceFlag;
-
-bool SelectSimpleRecorderSceneItemOnly(obs_scene_t * /*scene*/, obs_sceneitem_t *item, void *param)
-{
-	obs_sceneitem_t *selectedItem = static_cast<obs_sceneitem_t *>(param);
-	if (obs_sceneitem_is_group(item))
-		obs_sceneitem_group_enum_items(item, SelectSimpleRecorderSceneItemOnly, param);
-	obs_sceneitem_select(item, selectedItem == item);
-	return true;
-}
-
-struct SimpleRecorderSceneItemData {
-	obs_source_t *source;
-	obs_sceneitem_t *sceneItem = nullptr;
-	int64_t itemId = 0;
-	bool restoreState = false;
-	bool visible = true;
-};
-
-void AddSimpleRecorderSceneItem(void *data, obs_scene_t *scene)
-{
-	auto *addData = static_cast<SimpleRecorderSceneItemData *>(data);
-	addData->sceneItem = obs_scene_add(scene, addData->source);
-	if (addData->sceneItem && addData->restoreState) {
-		obs_sceneitem_set_id(addData->sceneItem, addData->itemId);
-		obs_sceneitem_set_visible(addData->sceneItem, addData->visible);
-	}
-}
-
-#ifdef _WIN32
-bool IsSimpleRecorderInputRegistered(const char *unversionedId)
-{
-	if (!unversionedId)
-		return false;
-
-	for (size_t index = 0;; ++index) {
-		const char *registeredUnversionedId = nullptr;
-		if (!obs_enum_input_types2(index, nullptr, &registeredUnversionedId))
-			return false;
-		if (registeredUnversionedId && strcmp(registeredUnversionedId, unversionedId) == 0)
-			return true;
-	}
-}
-
-QThreadPool &RecordingThumbnailPool()
-{
-	static QThreadPool pool;
-	pool.setMaxThreadCount(2);
-	return pool;
-}
-#endif
-
-QImage CreateVideoPlaceholder(const QString &extension)
-{
-	QImage image(320, 180, QImage::Format_ARGB32_Premultiplied);
-	image.fill(QColor("#20242b"));
-
-	QPainter painter(&image);
-	painter.setRenderHint(QPainter::Antialiasing, true);
-	painter.setPen(Qt::NoPen);
-	painter.setBrush(QColor("#303844"));
-	painter.drawRoundedRect(QRectF(8, 8, 304, 164), 12, 12);
-	painter.setBrush(QColor("#485464"));
-	painter.drawEllipse(QRectF(128, 50, 64, 64));
-
-	QPolygonF playButton;
-	playButton << QPointF(153, 64) << QPointF(153, 100) << QPointF(181, 82);
-	painter.setBrush(QColor("#f3f5f8"));
-	painter.drawPolygon(playButton);
-
-	QFont font = painter.font();
-	font.setBold(true);
-	font.setPointSize(10);
-	painter.setFont(font);
-	painter.setPen(QColor("#aeb7c4"));
-	painter.drawText(QRect(16, 137, 288, 22), Qt::AlignRight | Qt::AlignVCenter, extension.toUpper());
-	return image;
-}
-
-#ifdef _WIN32
-QImage LoadShellVideoThumbnail(const QString &filePath)
-{
-	QImage image;
-	const HRESULT initResult = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-	if (FAILED(initResult) && initResult != RPC_E_CHANGED_MODE)
-		return image;
-	const bool uninitializeCom = SUCCEEDED(initResult);
-
-	IShellItemImageFactory *imageFactory = nullptr;
-	const std::wstring path = filePath.toStdWString();
-	HRESULT result = SHCreateItemFromParsingName(path.c_str(), nullptr, IID_PPV_ARGS(&imageFactory));
-	if (SUCCEEDED(result) && imageFactory) {
-		HBITMAP thumbnail = nullptr;
-		const SIZE targetSize = {320, 180};
-		result = imageFactory->GetImage(targetSize, SIIGBF_THUMBNAILONLY, &thumbnail);
-		if (SUCCEEDED(result) && thumbnail) {
-			BITMAP bitmap = {};
-			if (GetObjectW(thumbnail, static_cast<int>(sizeof(bitmap)), &bitmap) == static_cast<int>(sizeof(bitmap)) &&
-			    bitmap.bmWidth > 0 && bitmap.bmHeight > 0) {
-				BITMAPINFO info = {};
-				info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-				info.bmiHeader.biWidth = bitmap.bmWidth;
-				info.bmiHeader.biHeight = -bitmap.bmHeight;
-				info.bmiHeader.biPlanes = 1;
-				info.bmiHeader.biBitCount = 32;
-				info.bmiHeader.biCompression = BI_RGB;
-
-				image = QImage(bitmap.bmWidth, bitmap.bmHeight, QImage::Format_RGB32);
-				HDC deviceContext = GetDC(nullptr);
-				if (!deviceContext ||
-				    GetDIBits(deviceContext, thumbnail, 0, static_cast<UINT>(bitmap.bmHeight), image.bits(), &info,
-					      DIB_RGB_COLORS) != bitmap.bmHeight) {
-					image = QImage();
-				}
-				if (deviceContext)
-					ReleaseDC(nullptr, deviceContext);
-			}
-			DeleteObject(thumbnail);
-		}
-		imageFactory->Release();
-	}
-
-	if (uninitializeCom)
-		CoUninitialize();
-	return image;
-}
-#endif
 }
 
 extern void setupDockAction(QDockWidget *dock);
@@ -795,7 +670,7 @@ bool OBSBasic::InitBasicConfigDefaults()
 	config_set_default_bool(activeConfiguration, "SimpleOutput", "UseAdvanced", false);
 	config_set_default_string(activeConfiguration, "SimpleOutput", "Preset", "veryfast");
 	config_set_default_string(activeConfiguration, "SimpleOutput", "NVENCPreset2", "p5");
-	config_set_default_string(activeConfiguration, "SimpleOutput", "RecQuality", "Stream");
+	config_set_default_string(activeConfiguration, "SimpleOutput", "RecQuality", "Small");
 	config_set_default_bool(activeConfiguration, "SimpleOutput", "RecRB", false);
 	config_set_default_int(activeConfiguration, "SimpleOutput", "RecRBTime", 20);
 	config_set_default_int(activeConfiguration, "SimpleOutput", "RecRBSize", 512);
@@ -1320,7 +1195,10 @@ void OBSBasic::OBSInit()
 		config_save_safe(App()->GetUserConfig(), "tmp", nullptr);
 	}
 
-	if (!first_run && !has_last_version && !Active()) {
+	const bool startInBandicam =
+		!config_has_user_value(App()->GetUserConfig(), "BandicamUI", "AlwaysStartBandicam") ||
+		config_get_bool(App()->GetUserConfig(), "BandicamUI", "AlwaysStartBandicam");
+	if (!first_run && !has_last_version && !Active() && !startInBandicam) {
 		QMetaObject::invokeMethod(this, &OBSBasic::on_autoConfigure_triggered, Qt::QueuedConnection);
 	}
 
@@ -1396,7 +1274,8 @@ void OBSBasic::OBSInit()
 	}
 
 	UpdatePreviewProgramIndicators();
-	SetSimpleRecorderMode(ui->simpleStudioModeButton->isChecked());
+	if (bandicamWidget)
+		bandicamWidget->InitializeAfterOBSReady();
 	OnFirstLoad();
 
 	if (!hideWindowOnStart) {
@@ -1432,12 +1311,8 @@ void OBSBasic::OnFirstLoad()
 
 OBSBasic::~OBSBasic()
 {
-#ifdef _WIN32
-	// Finish thumbnail workers before OBSBasic is destroyed. Workers post their
-	// results to this object, so QObject can safely discard pending callbacks.
-	RecordingThumbnailPool().clear();
-	RecordingThumbnailPool().waitForDone();
-#endif
+	if (bandicamWidget)
+		bandicamWidget->PrepareShutdown();
 }
 
 void OBSBasic::applicationShutdown() noexcept
@@ -1740,8 +1615,12 @@ void OBSBasic::closeEvent(QCloseEvent *event)
 	}
 
 	if (isVisible()) {
+		const QByteArray geomToSave =
+			(bandicamWidget && !bandicamWidget->IsStudioMode() && bandicamWidget->HasSavedStudioState())
+				? bandicamWidget->SavedStudioGeometry()
+				: saveGeometry();
 		config_set_string(App()->GetUserConfig(), "BasicWindow", "geometry",
-				  saveGeometry().toBase64().constData());
+				  geomToSave.toBase64().constData());
 	}
 
 	if (!isReadyToClose()) {
@@ -1906,16 +1785,24 @@ config_t *OBSBasic::Config() const
 void OBSBasic::saveAll()
 {
 	if (isVisible()) {
+		const QByteArray geomToSave =
+			(bandicamWidget && !bandicamWidget->IsStudioMode() && bandicamWidget->HasSavedStudioState())
+				? bandicamWidget->SavedStudioGeometry()
+				: saveGeometry();
 		config_set_string(App()->GetUserConfig(), "BasicWindow", "geometry",
-				  saveGeometry().toBase64().constData());
+				  geomToSave.toBase64().constData());
 	}
 
 	std::call_once(saveOnceFlag, [this]() {
 		Auth::Save();
 		SaveProjectNow();
 
+		const QByteArray dockStateToSave =
+			(bandicamWidget && !bandicamWidget->IsStudioMode() && bandicamWidget->HasSavedStudioState())
+				? bandicamWidget->SavedStudioDockState()
+				: saveState();
 		config_set_string(App()->GetUserConfig(), "BasicWindow", "DockState",
-				  saveState().toBase64().constData());
+				  dockStateToSave.toBase64().constData());
 
 #ifdef BROWSER_AVAILABLE
 		if (cef) {
@@ -2057,6 +1944,9 @@ void OBSBasic::closeWindow()
 
 	disableSaving++;
 
+	if (bandicamWidget)
+		bandicamWidget->PrepareShutdown();
+
 	/* Clear all scene data (dialogs, widgets, widget sub-items, scenes,
 	 * sources, etc) so that all references are released before shutdown */
 	ClearSceneData();
@@ -2144,6 +2034,11 @@ void OBSBasic::UpdateEditMenu()
 
 void OBSBasic::UpdateTitleBar()
 {
+	if (bandicamWidget && !bandicamWidget->IsStudioMode()) {
+		bandicamWidget->ApplyWindowTitle();
+		return;
+	}
+
 	stringstream name;
 
 	const char *profile = config_get_string(App()->GetUserConfig(), "Basic", "Profile");
@@ -2270,530 +2165,17 @@ void OBSBasic::on_actionOpenPluginManager_triggered()
 
 void OBSBasic::SetupSimpleRecorderUi()
 {
-	// Keep OBS's capture backends and output handlers; this is a recorder-first
-	// workspace layered over the existing OBS frontend.
-	auto *bar = ui->simpleRecorderBar;
-	if (!bar)
+	if (!ui || !ui->bandicamHost || !ui->bandicamHostLayout)
 		return;
 
-	bar->setVisible(true);
-	bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-
-	connect(ui->simpleSettingsButton, &QPushButton::clicked, this, &OBSBasic::on_action_RecordingSettings_triggered);
-	connect(ui->simpleRecordingsButton, &QPushButton::clicked, this, [this]() {
-		const char *mode = config_get_string(activeConfiguration, "Output", "Mode");
-		const bool advanced = mode && strcmp(mode, "Advanced") == 0;
-		const char *advancedType = config_get_string(activeConfiguration, "AdvOut", "RecType");
-		const char *path = advanced
-				   ? ((advancedType && strcmp(advancedType, "Standard") != 0)
-					      ? config_get_string(activeConfiguration, "AdvOut", "FFFilePath")
-					      : config_get_string(activeConfiguration, "AdvOut", "RecFilePath"))
-				   : config_get_string(activeConfiguration, "SimpleOutput", "FilePath");
-		const QString recordingPath = QString::fromUtf8(path ? path : "");
-
-		QDialog dialog(this);
-		dialog.setWindowTitle(QStringLiteral("Последние записи"));
-		dialog.resize(820, 620);
-
-		auto *layout = new QVBoxLayout(&dialog);
-		auto *title = new QLabel(QStringLiteral("Последние записи"), &dialog);
-		title->setStyleSheet(QStringLiteral("font-size: 16px; font-weight: 700; color: #f0f2f5;"));
-		auto *folder = new QLabel(recordingPath, &dialog);
-		folder->setStyleSheet(QStringLiteral("color: #9299a5; font-size: 10px;"));
-		folder->setTextInteractionFlags(Qt::TextSelectableByMouse);
-		folder->setWordWrap(true);
-		auto *list = new QListWidget(&dialog);
-		list->setViewMode(QListView::IconMode);
-		list->setFlow(QListView::LeftToRight);
-		list->setResizeMode(QListView::Adjust);
-		list->setMovement(QListView::Static);
-		list->setWrapping(true);
-		list->setWordWrap(true);
-		list->setSpacing(8);
-		list->setIconSize(QSize(168, 94));
-		list->setGridSize(QSize(192, 150));
-		list->setSelectionMode(QAbstractItemView::SingleSelection);
-		list->setUniformItemSizes(true);
-		dialog.setStyleSheet(QStringLiteral(
-			"QDialog { background: #1e2024; color: #eef0f3; }"
-			"QLabel { color: #c7cbd2; }"
-			"QListWidget { background: #17191d; border: 1px solid #343840; border-radius: 10px; padding: 8px; }"
-			"QListWidget::item { color: #e7eaf0; background: #262a30; border: 1px solid #343840; "
-			"border-radius: 8px; padding: 7px; }"
-			"QListWidget::item:hover { background: #303640; }"
-			"QListWidget::item:selected { background: #34485f; border-color: #648bb4; }"
-			"QPushButton { color: #eef0f3; background: #30343b; border: 1px solid #464c56; "
-			"border-radius: 7px; padding: 8px 14px; min-height: 22px; }"
-			"QPushButton:hover { background: #3c424c; }"
-			"QPushButton:disabled { color: #747b86; background: #25282d; }"));
-		auto *empty = new QLabel(&dialog);
-		empty->setAlignment(Qt::AlignCenter);
-		empty->setWordWrap(true);
-		empty->setMinimumHeight(70);
-		auto *buttons = new QHBoxLayout;
-		auto *openButton = new QPushButton(QStringLiteral("Открыть запись"), &dialog);
-		auto *folderButton = new QPushButton(QStringLiteral("Открыть папку"), &dialog);
-		auto *refreshButton = new QPushButton(QStringLiteral("Обновить"), &dialog);
-		auto *closeButton = new QPushButton(QStringLiteral("Закрыть"), &dialog);
-		openButton->setEnabled(false);
-		folderButton->setEnabled(!recordingPath.isEmpty() && QDir(recordingPath).exists());
-		buttons->addWidget(openButton);
-		buttons->addWidget(folderButton);
-		buttons->addStretch();
-		buttons->addWidget(refreshButton);
-		buttons->addWidget(closeButton);
-		layout->addWidget(title);
-		layout->addWidget(folder);
-		layout->addWidget(list, 1);
-		layout->addWidget(empty);
-		layout->addLayout(buttons);
-
-		auto refreshList = [list, empty, recordingPath, openButton]() {
-			list->clear();
-			openButton->setEnabled(false);
-			if (recordingPath.isEmpty()) {
-				empty->setText(QStringLiteral(
-					"Папка записей не настроена. Откройте настройки качества и укажите путь сохранения."));
-				empty->show();
-				return;
-			}
-
-			QDir directory(recordingPath);
-			if (!directory.exists()) {
-				empty->setText(QStringLiteral("Папка записей ещё не создана:\n%1").arg(recordingPath));
-				empty->show();
-				return;
-			}
-
-			const QStringList filters = {
-				QStringLiteral("*.mkv"),  QStringLiteral("*.mp4"), QStringLiteral("*.mov"),
-				QStringLiteral("*.m4v"),  QStringLiteral("*.mpeg"), QStringLiteral("*.mpg"),
-				QStringLiteral("*.m2ts"), QStringLiteral("*.mts"),  QStringLiteral("*.flv"),
-				QStringLiteral("*.ts"),   QStringLiteral("*.avi"),  QStringLiteral("*.webm"),
-				QStringLiteral("*.wmv"),  QStringLiteral("*.ogv"),  QStringLiteral("*.3gp")};
-			const QFileInfoList files =
-				directory.entryInfoList(filters, QDir::Files | QDir::Readable, QDir::Time);
-			int added = 0;
-			for (const QFileInfo &info : files) {
-				if (added >= 30)
-					break;
-				const QString size = info.size() >= 1024LL * 1024LL * 1024LL
-						     ? QStringLiteral("%1 GB").arg(info.size() / (1024.0 * 1024.0 * 1024.0), 0, 'f', 1)
-						     : QStringLiteral("%1 MB").arg(info.size() / (1024.0 * 1024.0), 0, 'f', 1);
-				auto *item = new QListWidgetItem(
-					QStringLiteral("%1\n%2  •  %3")
-						.arg(info.fileName(), info.lastModified().toString(QStringLiteral("dd.MM.yyyy HH:mm")), size),
-					list);
-				item->setIcon(QIcon(QPixmap::fromImage(CreateVideoPlaceholder(info.suffix()))));
-				item->setData(Qt::UserRole, info.absoluteFilePath());
-				item->setToolTip(QStringLiteral("%1\n%2").arg(info.absoluteFilePath(),
-									     info.lastModified().toString(Qt::ISODate)));
-				item->setTextAlignment(Qt::AlignHCenter);
-				item->setSizeHint(QSize(184, 142));
-#ifdef _WIN32
-				auto listGuard = std::make_shared<QPointer<QListWidget>>(list);
-				const QString filePath = info.absoluteFilePath();
-				RecordingThumbnailPool().start(QRunnable::create([this, listGuard, filePath]() {
-					QImage thumbnail = LoadShellVideoThumbnail(filePath);
-					if (thumbnail.isNull())
-						return;
-
-					QMetaObject::invokeMethod(this, [listGuard, filePath, thumbnail]() {
-						if (listGuard->isNull())
-							return;
-						QListWidget *targetList = listGuard->data();
-						for (int row = 0; row < targetList->count(); ++row) {
-							QListWidgetItem *current = targetList->item(row);
-							if (current->data(Qt::UserRole).toString() == filePath) {
-								current->setIcon(QIcon(QPixmap::fromImage(thumbnail)));
-								break;
-							}
-						}
-					}, Qt::QueuedConnection);
-				}), QThread::LowPriority);
-#endif
-				++added;
-			}
-
-			empty->setText(added == 0 ? QStringLiteral("В этой папке пока нет записей.") : QString());
-			empty->setVisible(added == 0);
-		};
-
-		auto openSelected = [&dialog, list]() {
-			QListWidgetItem *item = list->currentItem();
-			if (!item)
-				return;
-			const QString filePath = item->data(Qt::UserRole).toString();
-			if (QFileInfo::exists(filePath)) {
-				QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
-				dialog.accept();
-			}
-		};
-		connect(list, &QListWidget::currentItemChanged, &dialog,
-			[openButton](QListWidgetItem *current, QListWidgetItem *) { openButton->setEnabled(current != nullptr); });
-		connect(list, &QListWidget::itemActivated, &dialog,
-			[openSelected](QListWidgetItem *) { openSelected(); });
-		connect(openButton, &QPushButton::clicked, &dialog, openSelected);
-		connect(folderButton, &QPushButton::clicked, &dialog, [recordingPath]() {
-			if (!recordingPath.isEmpty() && QDir(recordingPath).exists())
-				QDesktopServices::openUrl(QUrl::fromLocalFile(recordingPath));
-		});
-		connect(refreshButton, &QPushButton::clicked, &dialog, refreshList);
-		connect(closeButton, &QPushButton::clicked, &dialog, &QDialog::accept);
-		refreshList();
-		dialog.exec();
-	});
-	connect(ui->simpleCaptureSourceButton, &QPushButton::clicked, this, &OBSBasic::AddSimpleCaptureSource);
-	connect(ui->simpleRecordButton, &QPushButton::clicked, this, [this]() {
-		RecordActionTriggered();
-	});
-	connect(ui->simpleStudioModeButton, &QPushButton::toggled, this, &OBSBasic::SetSimpleRecorderMode);
-	connect(ui->simplePreviewButton, &QPushButton::toggled, this, [this](bool) {
-		if (ui->simpleStudioModeButton->isChecked())
-			return;
-		SetSimpleRecorderMode(false);
-	});
-
-	simpleRecordTimer = new QTimer(this);
-	simpleRecordTimer->setInterval(1000);
-
-	auto updateRecordButton = [this]() {
-		const bool active = RecordingActive();
-		const bool paused = active && isRecordingPausable && outputHandler && outputHandler->fileOutput &&
-				    obs_output_paused(outputHandler->fileOutput);
-		const qint64 elapsedMs =
-			simpleRecordingElapsedMs + (simpleRecordingClock.isValid() ? simpleRecordingClock.elapsed() : 0);
-		const uint64_t totalSeconds = static_cast<uint64_t>(std::max<qint64>(0, elapsedMs) / 1000);
-		const uint32_t hours = static_cast<uint32_t>(totalSeconds / 3600);
-		const uint32_t minutes = static_cast<uint32_t>((totalSeconds / 60) % 60);
-		const uint32_t seconds = static_cast<uint32_t>(totalSeconds % 60);
-		const QString elapsed = QString::asprintf("%02u:%02u:%02u", hours, minutes, seconds);
-
-		ui->simpleRecordButton->setText(active ? QStringLiteral("■  Остановить запись")
-							       : QStringLiteral("●  Начать запись"));
-		ui->simpleRecordStatus->setText(
-			paused ? QStringLiteral("ПАУЗА  ") + elapsed
-			       : active ? QStringLiteral("● REC  ") + elapsed : QStringLiteral("ГОТОВ К ЗАПИСИ"));
-		ui->simpleRecordStatus->setStyleSheet(
-			active ? QStringLiteral("color: #ff6874; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;")
-			       : QStringLiteral("color: #aeb4be; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;"));
-
-		const bool canPause = active && isRecordingPausable;
-		ui->simplePauseButton->setVisible(canPause);
-		ui->simplePauseButton->setText(paused ? QStringLiteral("▶  Продолжить")
-							      : QStringLiteral("Ⅱ  Пауза"));
-	};
-
-	connect(simpleRecordTimer, &QTimer::timeout, this, updateRecordButton);
-	connect(this, &OBSBasic::RecordingStarted, this, [this, updateRecordButton]() {
-		simpleRecordingElapsedMs = 0;
-		simpleRecordingClock.start();
-		simpleRecordTimer->start();
-		updateRecordButton();
-	});
-	connect(this, &OBSBasic::RecordingStopped, this, [this, updateRecordButton]() {
-		simpleRecordTimer->stop();
-		simpleRecordingClock.invalidate();
-		simpleRecordingElapsedMs = 0;
-		updateRecordButton();
-	});
-	connect(this, &OBSBasic::RecordingPaused, this, [this, updateRecordButton]() {
-		if (simpleRecordingClock.isValid()) {
-			simpleRecordingElapsedMs += simpleRecordingClock.elapsed();
-			simpleRecordingClock.invalidate();
-		}
-		simpleRecordTimer->stop();
-		updateRecordButton();
-	});
-	connect(this, &OBSBasic::RecordingUnpaused, this, [this, updateRecordButton]() {
-		simpleRecordingClock.start();
-		simpleRecordTimer->start();
-		updateRecordButton();
-	});
-	connect(ui->simplePauseButton, &QPushButton::clicked, this, [this]() {
-		RecordPauseToggled();
-	});
-	updateRecordButton();
-
-	// OBS output channels 1 and 3 are the configured desktop and microphone
-	// buses. A missing device disables its shortcut instead of muting an
-	// unrelated mixer source.
-	auto connectAudioToggle = [this](QPushButton *button, uint32_t channel, const QString &label) {
-		connect(button, &QPushButton::toggled, this, [button, channel, label](bool enabled) {
-			OBSSourceAutoRelease source(obs_get_output_source(channel));
-			if (!source) {
-				button->setEnabled(false);
-				return;
-			}
-			obs_source_set_muted(source.Get(), !enabled);
-			button->setText(enabled ? label : label + QStringLiteral(" — выкл."));
-		});
-	};
-	connectAudioToggle(ui->simpleMicButton, 3, QStringLiteral("Микрофон"));
-	connectAudioToggle(ui->simpleSystemAudioButton, 1, QStringLiteral("Системный звук"));
-
-	ui->simplePreviewButton->setChecked(false);
-	ui->simpleStudioModeButton->setChecked(false);
+	bandicamWidget = new BandicamRecorderWidget(this, ui->bandicamHost);
+	ui->bandicamHostLayout->addWidget(bandicamWidget);
 }
-
-void OBSBasic::AddSimpleCaptureSource()
-{
-#if defined(_WIN32)
-	const int mode = ui->simpleCaptureMode->currentIndex();
-	const char *sourceId = nullptr;
-	const char *baseName = nullptr;
-
-	switch (mode) {
-	case 0:
-		sourceId = "monitor_capture";
-		baseName = "Захват экрана";
-		break;
-	case 1:
-		sourceId = "game_capture";
-		baseName = "Захват игры";
-		break;
-	case 2:
-		sourceId = "window_capture";
-		baseName = "Захват окна";
-		break;
-	case 3:
-		sourceId = "monitor_capture";
-		baseName = "Захват области";
-		break;
-	default:
-		return;
-	}
-
-	std::string sourceName = baseName;
-	for (uint32_t suffix = 2;; ++suffix) {
-		OBSSourceAutoRelease existing(obs_get_source_by_name(sourceName.c_str()));
-		if (!existing)
-			break;
-		sourceName = std::string(baseName) + " (" + std::to_string(suffix) + ")";
-	}
-
-	if (!IsSimpleRecorderInputRegistered(sourceId)) {
-		QMessageBox::warning(this, QStringLiteral("Источник недоступен"),
-				     QStringLiteral("Модуль захвата Windows не зарегистрировал выбранный тип источника."));
-		return;
-	}
-
-	const char *latestSourceId = obs_get_latest_input_type_id(sourceId);
-	if (!latestSourceId) {
-		QMessageBox::warning(this, QStringLiteral("Источник недоступен"),
-				     QStringLiteral("Не удалось определить актуальную версию типа захвата."));
-		return;
-	}
-
-	// Match OBS's native source creation path: use the latest registered input
-	// type ID and let the source apply its own default settings.
-	OBSSourceAutoRelease source(obs_source_create(latestSourceId, sourceName.c_str(), nullptr, nullptr));
-	if (!source) {
-		QMessageBox::warning(
-			this, QStringLiteral("Не удалось добавить источник"),
-			QStringLiteral("OBS не смог создать выбранный источник захвата. Проверьте, что модуль захвата Windows загружен."));
-		return;
-	}
-
-	// Use OBS's own dynamic properties for monitor/window selection. This
-	// reuses Win-Capture's native device and target enumeration instead of
-	// maintaining a second, potentially stale list in the recorder UI.
-	OBSDataAutoRelease sourceSettings = obs_source_get_settings(source.Get());
-	OBSDataAutoRelease originalSettings = obs_data_create();
-	obs_data_apply(originalSettings.Get(), sourceSettings.Get());
-
-	QDialog setupDialog(this);
-	setupDialog.setWindowTitle(QStringLiteral("Настройка захвата"));
-	setupDialog.resize(560, 420);
-	auto *setupLayout = new QVBoxLayout(&setupDialog);
-	auto *setupLabel = new QLabel(QStringLiteral(
-		"Выберите монитор, окно или способ захвата. Список формируется самим OBS."), &setupDialog);
-	setupLabel->setWordWrap(true);
-	auto *properties = new OBSPropertiesView(sourceSettings.Get(), source.Get(),
-						  (PropertiesReloadCallback)obs_source_properties, nullptr,
-						  (PropertiesVisualUpdateCb)obs_source_update);
-	properties->setMinimumWidth(500);
-	properties->setMinimumHeight(220);
-	auto *setupButtons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &setupDialog);
-	setupButtons->button(QDialogButtonBox::Ok)->setText(QStringLiteral("Добавить источник"));
-	connect(setupButtons, &QDialogButtonBox::accepted, &setupDialog, &QDialog::accept);
-	connect(setupButtons, &QDialogButtonBox::rejected, &setupDialog, &QDialog::reject);
-	setupLayout->addWidget(setupLabel);
-	setupLayout->addWidget(properties, 1);
-	setupLayout->addWidget(setupButtons);
-
-	if (setupDialog.exec() != QDialog::Accepted) {
-		obs_source_update(source.Get(), originalSettings.Get());
-		obs_source_remove(source.Get());
-		return;
-	}
-	if (properties->DeferUpdate())
-		properties->UpdateSettings();
-
-	OBSScene scene = GetCurrentScene();
-	if (!scene) {
-		QMessageBox::warning(this, QStringLiteral("Нет активной сцены"),
-				     QStringLiteral("Сначала создайте или выберите сцену OBS."));
-		obs_source_remove(source.Get());
-		return;
-	}
-
-	SimpleRecorderSceneItemData addData{};
-	addData.source = source.Get();
-	obs_enter_graphics();
-	obs_scene_atomic_update(scene.Get(), AddSimpleRecorderSceneItem, &addData);
-	obs_leave_graphics();
-	obs_sceneitem_t *sceneItem = addData.sceneItem;
-	if (!sceneItem) {
-		QMessageBox::warning(this, QStringLiteral("Не удалось добавить источник"),
-				     QStringLiteral("Источник создан, но не удалось добавить его в текущую сцену."));
-		obs_source_remove(source.Get());
-		return;
-	}
-
-	// Select the new source in OBS so preview transforms (including Alt-drag
-	// cropping in Area mode) target the source the user just added.
-	obs_scene_enum_items(scene.Get(), SelectSimpleRecorderSceneItemOnly, sceneItem);
-
-	// Register the operation in OBS's native undo stack so Ctrl+Z and redo
-	// behave exactly as they do for sources created in the standard picker.
-	OBSSource currentSceneSource = GetCurrentSceneSource();
-	const char *sceneUuidRaw = currentSceneSource ? obs_source_get_uuid(currentSceneSource.Get()) : nullptr;
-	const char *sourceUuidRaw = obs_source_get_uuid(source.Get());
-	if (sceneUuidRaw && sourceUuidRaw) {
-		const std::string sceneUuid(sceneUuidRaw);
-		OBSDataAutoRelease wrapper(obs_data_create());
-		obs_data_set_string(wrapper.Get(), "id", sourceId);
-		obs_data_set_int(wrapper.Get(), "item_id", obs_sceneitem_get_id(sceneItem));
-		obs_data_set_string(wrapper.Get(), "name", sourceName.c_str());
-		obs_data_set_bool(wrapper.Get(), "visible", true);
-		OBSDataAutoRelease savedSourceSettings = obs_source_get_settings(source.Get());
-		obs_data_set_obj(wrapper.Get(), "settings", savedSourceSettings.Get());
-
-		auto activeSourceUuid = std::make_shared<std::string>(sourceUuidRaw);
-		auto undo = [sceneUuid, activeSourceUuid](const std::string &) {
-			OBSBasic *main = OBSBasic::Get();
-			OBSSourceAutoRelease addedSource(obs_get_source_by_uuid(activeSourceUuid->c_str()));
-			if (addedSource)
-				obs_source_remove(addedSource.Get());
-			OBSSourceAutoRelease sceneSource(obs_get_source_by_uuid(sceneUuid.c_str()));
-			if (sceneSource)
-				main->SetCurrentScene(sceneSource.Get(), true);
-		};
-		auto redo = [sceneUuid, activeSourceUuid](const std::string &data) {
-			OBSBasic *main = OBSBasic::Get();
-			OBSSourceAutoRelease sceneSource(obs_get_source_by_uuid(sceneUuid.c_str()));
-			if (!sceneSource)
-				return;
-			main->SetCurrentScene(sceneSource.Get(), true);
-
-			OBSDataAutoRelease saved(obs_data_create_from_json(data.c_str()));
-			const char *savedId = obs_get_latest_input_type_id(obs_data_get_string(saved.Get(), "id"));
-			if (!savedId)
-				return;
-			OBSDataAutoRelease savedSourceSettings = obs_data_get_obj(saved.Get(), "settings");
-			OBSSourceAutoRelease restored(obs_source_create(
-				savedId, obs_data_get_string(saved.Get(), "name"), savedSourceSettings.Get(), nullptr));
-			if (!restored)
-				return;
-
-			const char *restoredUuid = obs_source_get_uuid(restored.Get());
-			if (!restoredUuid)
-				return;
-			*activeSourceUuid = restoredUuid;
-
-			OBSScene currentScene = main->GetCurrentScene();
-			if (!currentScene)
-				return;
-			SimpleRecorderSceneItemData addData{};
-			addData.source = restored.Get();
-			addData.itemId = static_cast<int64_t>(obs_data_get_int(saved.Get(), "item_id"));
-			addData.restoreState = true;
-			addData.visible = obs_data_get_bool(saved.Get(), "visible");
-			obs_enter_graphics();
-			obs_scene_atomic_update(currentScene.Get(), AddSimpleRecorderSceneItem, &addData);
-			obs_leave_graphics();
-			if (addData.sceneItem)
-				obs_scene_enum_items(currentScene.Get(), SelectSimpleRecorderSceneItemOnly, addData.sceneItem);
-		};
-		undo_s.add_action(QTStr("Undo.Add").arg(QString::fromStdString(sourceName)), undo, redo,
-				  std::string(sourceUuidRaw), std::string(obs_data_get_json(wrapper.Get())));
-	}
-
-	// Open the native properties dialog so the user can select the display,
-	// target window, or game capture method without exposing the full dock UI.
-	if (mode == 3) {
-		ui->simplePreviewButton->setChecked(true);
-		ui->simpleCaptureSourceButton->setToolTip(QStringLiteral(
-			"Для кадрирования удерживайте Alt и перетаскивайте границу источника в предпросмотре."));
-	} else {
-		ui->simpleCaptureSourceButton->setToolTip(QStringLiteral("Добавить выбранный тип захвата"));
-	}
- 	// The source target was already configured in the compact setup dialog.
-#else
-	// The quick source-type mapping uses the Windows capture source IDs.
-	// On other platforms, fall back to OBS's native source picker.
-	ui->actionAddSource->trigger();
-#endif
-}
-
 
 void OBSBasic::SetSimpleRecorderMode(bool studioMode)
 {
-	// Capture the full dock layout (including plug-in and user-created docks)
-	// before entering the recorder workspace. Reapply it when returning to OBS.
-	if (studioMode != simpleStudioMode) {
-		if (studioMode) {
-			if (simpleStudioDockStateSaved)
-				restoreState(simpleStudioDockState);
-			if (simpleStudioWindowSize.isValid())
-				resize(simpleStudioWindowSize);
-		} else {
-			simpleStudioDockState = saveState();
-			simpleStudioDockStateSaved = true;
-			simpleStudioWindowSize = size();
-		}
-		simpleStudioMode = studioMode;
-	}
-
-	if (!studioMode) {
-		for (QDockWidget *dock : findChildren<QDockWidget *>())
-			dock->hide();
-	}
-
-	const bool previewVisible = studioMode || ui->simplePreviewButton->isChecked();
-	ui->canvasEditor->setVisible(previewVisible);
-	ui->contextContainer->setVisible(previewVisible);
-	ui->simplePreviewButton->setVisible(!studioMode);
-	ui->menubar->setVisible(studioMode);
-	ui->statusbar->setVisible(studioMode);
-
-	ui->simpleStudioModeButton->setText(studioMode ? QStringLiteral("Компактный режим")
-								       : QStringLiteral("Полный интерфейс"));
-	setWindowTitle(studioMode ? QStringLiteral("OBS Studio") : QStringLiteral("OBS Recorder"));
-
-	// In recorder mode keep the main window close to a compact Bandicam-style
-	// control panel. Showing preview expands the window without losing the
-	// previous studio geometry.
-	if (!studioMode)
-		resize(960, previewVisible ? 760 : 180);
-
-	auto syncAudioButton = [](QPushButton *button, uint32_t channel, const QString &label) {
-		QSignalBlocker signalBlocker(button);
-		OBSSourceAutoRelease source(obs_get_output_source(channel));
-		if (!source) {
-			button->setEnabled(false);
-			button->setChecked(false);
-			button->setText(label + QStringLiteral(" — не настроен"));
-			return;
-		}
-		button->setEnabled(true);
-		const bool enabled = !obs_source_muted(source.Get());
-		button->setChecked(enabled);
-		button->setText(enabled ? label : label + QStringLiteral(" — выкл."));
-	};
-	if (!studioMode) {
-		syncAudioButton(ui->simpleMicButton, 3, QStringLiteral("Микрофон"));
-		syncAudioButton(ui->simpleSystemAudioButton, 1, QStringLiteral("Системный звук"));
-	}
+	if (!bandicamWidget)
+		return;
+	bandicamWidget->SetViewMode(studioMode ? BandicamRecorderWidget::ViewMode::Studio
+					       : BandicamRecorderWidget::ViewMode::Bandicam);
 }

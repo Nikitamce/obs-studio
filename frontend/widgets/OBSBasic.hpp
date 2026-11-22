@@ -50,6 +50,7 @@
 
 extern volatile bool recording_paused;
 
+class BandicamRecorderWidget;
 class ColorSelect;
 class OBSAbout;
 class OBSBasicAdvAudio;
@@ -266,14 +267,10 @@ private:
 	QScopedPointer<QThread> patronJsonThread;
 	std::string patronJson;
 
+	friend class BandicamRecorderWidget;
+
 	std::unique_ptr<Ui::OBSBasic> ui;
-	QPointer<QTimer> simpleRecordTimer;
-	QElapsedTimer simpleRecordingClock;
-	qint64 simpleRecordingElapsedMs = 0;
-	QSize simpleStudioWindowSize;
-	bool simpleStudioMode = true;
-	QByteArray simpleStudioDockState;
-	bool simpleStudioDockStateSaved = false;
+	QPointer<BandicamRecorderWidget> bandicamWidget;
 
 	void OnEvent(enum obs_frontend_event event);
 	void ShowSettingsDialog(bool outputPage);
@@ -306,7 +303,6 @@ public slots:
 	void applicationShutdown() noexcept;
 	void toggleMixerLayout();
 	void SetupSimpleRecorderUi();
-	void AddSimpleCaptureSource();
 	void SetSimpleRecorderMode(bool studioMode);
 
 public:

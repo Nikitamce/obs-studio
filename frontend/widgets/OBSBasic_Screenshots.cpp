@@ -16,6 +16,7 @@
 ******************************************************************************/
 
 #include "OBSBasic.hpp"
+#include "BandicamRecorderWidget.hpp"
 
 #include <utility/ScreenshotObj.hpp>
 
@@ -34,6 +35,8 @@ void OBSBasic::Screenshot(OBSSource source)
 	connect(screenshotData, &ScreenshotObj::imageSaved, this, [this](std::string path) {
 		ShowStatusBarMessage(QTStr("Basic.StatusBar.ScreenshotSavedTo").arg(QT_UTF8(path.c_str())));
 		lastScreenshot = path;
+		if (bandicamWidget)
+			bandicamWidget->OnScreenshotSaved(QT_UTF8(path.c_str()));
 
 		OnEvent(OBS_FRONTEND_EVENT_SCREENSHOT_TAKEN);
 	});

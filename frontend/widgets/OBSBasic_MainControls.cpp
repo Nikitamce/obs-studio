@@ -18,6 +18,7 @@
 ******************************************************************************/
 
 #include "OBSBasic.hpp"
+#include "BandicamRecorderWidget.hpp"
 #include "OBSBasicStats.hpp"
 
 #include <dialogs/LogUploadDialog.hpp>
@@ -229,6 +230,9 @@ void OBSBasic::ShowSettingsDialog(bool outputPage)
 		settings.exec();
 	}
 	settings_already_executing = false;
+
+	if (bandicamWidget)
+		bandicamWidget->RefreshAfterSettingsChanged();
 
 	if (restart) {
 		QMessageBox::StandardButton button =
