@@ -146,6 +146,7 @@ QThreadPool &RecordingThumbnailPool()
 	pool.setMaxThreadCount(2);
 	return pool;
 }
+#endif
 
 QImage CreateVideoPlaceholder(const QString &extension)
 {
@@ -174,6 +175,7 @@ QImage CreateVideoPlaceholder(const QString &extension)
 	return image;
 }
 
+#ifdef _WIN32
 QImage LoadShellVideoThumbnail(const QString &filePath)
 {
 	QImage image;
