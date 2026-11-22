@@ -33,9 +33,10 @@
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDockWidget>
-#include <QFileIconProvider>
 #include <QFileInfo>
 #include <QImage>
+#include <QPainter>
+#include <QPolygonF>
 #include <QIcon>
 #include <QListView>
 #include <QPixmap>
@@ -2320,7 +2321,6 @@ void OBSBasic::SetupSimpleRecorderUi()
 				QStringLiteral("*.wmv"),  QStringLiteral("*.ogv"),  QStringLiteral("*.3gp")};
 			const QFileInfoList files =
 				directory.entryInfoList(filters, QDir::Files | QDir::Readable, QDir::Time | QDir::Reversed);
-			QFileIconProvider iconProvider;
 			int added = 0;
 			for (const QFileInfo &info : files) {
 				if (added >= 30)
@@ -2332,7 +2332,7 @@ void OBSBasic::SetupSimpleRecorderUi()
 					QStringLiteral("%1\n%2  •  %3")
 						.arg(info.fileName(), info.lastModified().toString(QStringLiteral("dd.MM.yyyy HH:mm")), size),
 					list);
-				item->setIcon(iconProvider.icon(info));
+				item->setIcon(QIcon(QPixmap::fromImage(CreateVideoPlaceholder(info.suffix()))));
 				item->setData(Qt::UserRole, info.absoluteFilePath());
 				item->setToolTip(QStringLiteral("%1\n%2").arg(info.absoluteFilePath(),
 									     info.lastModified().toString(Qt::ISODate)));
