@@ -2349,7 +2349,7 @@ void OBSBasic::SetupSimpleRecorderUi()
 				item->setTextAlignment(Qt::AlignHCenter);
 				item->setSizeHint(QSize(184, 142));
 #ifdef _WIN32
-				QPointer<QListWidget> listGuard(list);
+				auto listGuard = std::make_shared<QPointer<QListWidget>>(list);
 				const QString filePath = info.absoluteFilePath();
 				RecordingThumbnailPool().start(QRunnable::create([this, listGuard, filePath]() {
 					QImage thumbnail = LoadShellVideoThumbnail(filePath);
@@ -2357,10 +2357,11 @@ void OBSBasic::SetupSimpleRecorderUi()
 						return;
 
 					QMetaObject::invokeMethod(this, [listGuard, filePath, thumbnail]() {
-						if (!listGuard)
+						if (listGuard->isNull())
 							return;
-						for (int row = 0; row < listGuard->count(); ++row) {
-							QListWidgetItem *current = listGuard->item(row);
+						QListWidget *targetList = listGuard->data();
+						for (int row = 0; row < targetList->count(); ++row) {
+							QListWidgetItem *current = targetList->item(row);
 							if (current->data(Qt::UserRole).toString() == filePath) {
 								current->setIcon(QIcon(QPixmap::fromImage(thumbnail)));
 								break;
