@@ -40,6 +40,7 @@
 #include <util/util.hpp>
 
 #include <QAccessible>
+#include <QByteArray>
 #include <QPointer>
 #include <QSystemTrayIcon>
 #include <QSize>
