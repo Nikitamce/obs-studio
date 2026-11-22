@@ -36,6 +36,9 @@
 #include <QFileIconProvider>
 #include <QFileInfo>
 #include <QImage>
+#include <QIcon>
+#include <QListView>
+#include <QPixmap>
 #include <QThreadPool>
 #include <QRunnable>
 #include <QHBoxLayout>
