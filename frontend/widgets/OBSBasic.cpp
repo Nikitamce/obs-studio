@@ -2564,16 +2564,17 @@ void OBSBasic::AddSimpleCaptureSource()
 		OBSDataAutoRelease savedSourceSettings = obs_source_get_settings(source.Get());
 		obs_data_set_obj(wrapper.Get(), "settings", savedSourceSettings.Get());
 
-		auto undo = [sceneUuid](const std::string &uuid) {
+		auto activeSourceUuid = std::make_shared<std::string>(sourceUuidRaw);
+		auto undo = [sceneUuid, activeSourceUuid](const std::string &) {
 			OBSBasic *main = OBSBasic::Get();
-			OBSSourceAutoRelease addedSource(obs_get_source_by_uuid(uuid.c_str()));
+			OBSSourceAutoRelease addedSource(obs_get_source_by_uuid(activeSourceUuid->c_str()));
 			if (addedSource)
 				obs_source_remove(addedSource.Get());
 			OBSSourceAutoRelease sceneSource(obs_get_source_by_uuid(sceneUuid.c_str()));
 			if (sceneSource)
 				main->SetCurrentScene(sceneSource.Get(), true);
 		};
-		auto redo = [sceneUuid](const std::string &data) {
+		auto redo = [sceneUuid, activeSourceUuid](const std::string &data) {
 			OBSBasic *main = OBSBasic::Get();
 			OBSSourceAutoRelease sceneSource(obs_get_source_by_uuid(sceneUuid.c_str()));
 			if (!sceneSource)
@@ -2589,6 +2590,11 @@ void OBSBasic::AddSimpleCaptureSource()
 				savedId, obs_data_get_string(saved.Get(), "name"), savedSourceSettings.Get(), nullptr));
 			if (!restored)
 				return;
+
+			const char *restoredUuid = obs_source_get_uuid(restored.Get());
+			if (!restoredUuid)
+				return;
+			*activeSourceUuid = restoredUuid;
 
 			OBSScene currentScene = main->GetCurrentScene();
 			if (!currentScene)
