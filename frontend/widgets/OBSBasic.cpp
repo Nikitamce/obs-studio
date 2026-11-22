@@ -2139,7 +2139,8 @@ void OBSBasic::SetupSimpleRecorderUi()
 							       : QStringLiteral("●  Начать запись"));
 		const bool canPause = active && isRecordingPausable;
 		ui->simplePauseButton->setVisible(canPause);
-		const bool paused = canPause && recordingPaused;
+		const bool paused = canPause && outputHandler && outputHandler->fileOutput &&
+				   obs_output_paused(outputHandler->fileOutput);
 		ui->simplePauseButton->setText(paused ? QStringLiteral("▶  Продолжить")
 							      : QStringLiteral("Ⅱ  Пауза"));
 	};
