@@ -104,8 +104,8 @@
                  </item>
             <item>
                  <widget class="QPushButton" name="simpleRecordingsButton">
-                  <property name="text"><string>Папка</string></property>
-                  <property name="toolTip"><string>Открыть папку с записями</string></property>
+                  <property name="text"><string>Записи</string></property>
+                  <property name="toolTip"><string>Открыть последние записи и папку сохранения</string></property>
                  </widget>
                 </item>
             <item>
@@ -136,10 +136,10 @@
                  </item>
             <item>
                  <widget class="QPushButton" name="simpleStudioModeButton">
-                  <property name="text"><string>Студийный режим</string></property>
+                  <property name="text"><string>Полный интерфейс</string></property>
                   <property name="checkable"><bool>true</bool></property>
                   <property name="checked"><bool>false</bool></property>
-                  <property name="toolTip"><string>Показать панели сцен, источников и микшера OBS</string></property>
+                  <property name="toolTip"><string>Переключить компактный режим и полный интерфейс OBS</string></property>
                  </widget>
                 </item>
             <item>
