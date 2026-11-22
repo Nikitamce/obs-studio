@@ -191,8 +191,8 @@ QImage LoadShellVideoThumbnail(const QString &filePath)
 		result = imageFactory->GetImage(targetSize, SIIGBF_THUMBNAILONLY, &thumbnail);
 		if (SUCCEEDED(result) && thumbnail) {
 			BITMAP bitmap = {};
-			if (GetObjectW(thumbnail, static_cast<int>(sizeof(bitmap)), &bitmap) == static_cast<int>(sizeof(bitmap)) && bitmap.bmWidth > 0 &&
-			    bitmap.bmHeight > 0) {
+			if (GetObjectW(thumbnail, static_cast<int>(sizeof(bitmap)), &bitmap) == static_cast<int>(sizeof(bitmap)) &&
+			    bitmap.bmWidth > 0 && bitmap.bmHeight > 0) {
 				BITMAPINFO info = {};
 				info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 				info.bmiHeader.biWidth = bitmap.bmWidth;
