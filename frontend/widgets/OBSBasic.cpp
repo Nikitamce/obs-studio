@@ -2206,7 +2206,6 @@ void OBSBasic::SetupSimpleRecorderUi()
 
 	ui->simplePreviewButton->setChecked(false);
 	ui->simpleStudioModeButton->setChecked(false);
-	SetSimpleRecorderMode(false);
 }
 
 void OBSBasic::AddSimpleCaptureSource()
@@ -2368,9 +2367,23 @@ void OBSBasic::SetSimpleRecorderMode(bool studioMode)
 									 : QStringLiteral("Студийный режим"));
 	setWindowTitle(studioMode ? QStringLiteral("OBS Studio") : QStringLiteral("OBS Recorder"));
 
+	// Preserve the user's normal OBS window size when switching between
+	// the compact recorder workspace and the full studio interface.
+	if (studioMode != simpleStudioMode) {
+		if (studioMode) {
+			if (simpleStudioWindowSize.isValid())
+				resize(simpleStudioWindowSize);
+		} else {
+			simpleStudioWindowSize = size();
+		}
+		simpleStudioMode = studioMode;
+	}
+
 	// In recorder mode keep the main window close to a compact Bandicam-style
-	// control panel. Showing preview or restoring studio mode expands it again.
-	resize(960, previewVisible ? 760 : 180);
+	// control panel. Showing preview expands the window without losing the
+	// previous studio geometry.
+	if (!studioMode)
+		resize(960, previewVisible ? 760 : 180);
 
 	auto syncAudioButton = [](QPushButton *button, uint32_t channel, const QString &label) {
 		QSignalBlocker signalBlocker(button);
