@@ -82,6 +82,7 @@
 #endif
 #include <qt-wrappers.hpp>
 
+#include <QAbstractItemView>
 #include <QActionGroup>
 #include <QThread>
 #include <QWidgetAction>
@@ -151,7 +152,7 @@ QImage LoadShellVideoThumbnail(const QString &filePath)
 	if (SUCCEEDED(result) && imageFactory) {
 		HBITMAP thumbnail = nullptr;
 		const SIZE targetSize = {320, 180};
-		result = imageFactory->GetImage(targetSize, SIIGBF_THUMBNAILONLY | SIIGBF_BIGGERSIZEOK, &thumbnail);
+		result = imageFactory->GetImage(targetSize, SIIGBF_THUMBNAILONLY, &thumbnail);
 		if (SUCCEEDED(result) && thumbnail) {
 			BITMAP bitmap = {};
 			if (GetObjectW(thumbnail, sizeof(bitmap), &bitmap) == sizeof(bitmap) && bitmap.bmWidth > 0 &&
@@ -2341,7 +2342,7 @@ void OBSBasic::SetupSimpleRecorderUi()
 		};
 		connect(list, &QListWidget::currentItemChanged, &dialog,
 			[openButton](QListWidgetItem *current, QListWidgetItem *) { openButton->setEnabled(current != nullptr); });
-		connect(list, &QListWidget::itemDoubleClicked, &dialog,
+		connect(list, &QListWidget::itemActivated, &dialog,
 			[openSelected](QListWidgetItem *) { openSelected(); });
 		connect(openButton, &QPushButton::clicked, &dialog, openSelected);
 		connect(folderButton, &QPushButton::clicked, &dialog, [recordingPath]() {
