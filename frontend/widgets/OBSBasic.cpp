@@ -32,6 +32,7 @@
 #include <QDir>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QDockWidget>
 #include <QFileIconProvider>
 #include <QFileInfo>
 #include <QHBoxLayout>
@@ -2506,12 +2507,26 @@ void OBSBasic::AddSimpleCaptureSource()
 
 void OBSBasic::SetSimpleRecorderMode(bool studioMode)
 {
-	ui->scenesDock->setVisible(studioMode);
-	ui->sourcesDock->setVisible(studioMode);
-	ui->transitionsDock->setVisible(studioMode);
-	ui->mixerDock->setVisible(studioMode);
-	if (controlsDock)
-		controlsDock->setVisible(studioMode);
+	// Capture the full dock layout (including plug-in and user-created docks)
+	// before entering the recorder workspace. Reapply it when returning to OBS.
+	if (studioMode != simpleStudioMode) {
+		if (studioMode) {
+			if (simpleStudioDockStateSaved)
+				restoreState(simpleStudioDockState);
+			if (simpleStudioWindowSize.isValid())
+				resize(simpleStudioWindowSize);
+		} else {
+			simpleStudioDockState = saveState();
+			simpleStudioDockStateSaved = true;
+			simpleStudioWindowSize = size();
+		}
+		simpleStudioMode = studioMode;
+	}
+
+	if (!studioMode) {
+		for (QDockWidget *dock : findChildren<QDockWidget *>())
+			dock->hide();
+	}
 
 	const bool previewVisible = studioMode || ui->simplePreviewButton->isChecked();
 	ui->canvasEditor->setVisible(previewVisible);
@@ -2521,20 +2536,8 @@ void OBSBasic::SetSimpleRecorderMode(bool studioMode)
 	ui->statusbar->setVisible(studioMode);
 
 	ui->simpleStudioModeButton->setText(studioMode ? QStringLiteral("Простой режим")
-									 : QStringLiteral("Студийный режим"));
+								       : QStringLiteral("Студийный режим"));
 	setWindowTitle(studioMode ? QStringLiteral("OBS Studio") : QStringLiteral("OBS Recorder"));
-
-	// Preserve the user's normal OBS window size when switching between
-	// the compact recorder workspace and the full studio interface.
-	if (studioMode != simpleStudioMode) {
-		if (studioMode) {
-			if (simpleStudioWindowSize.isValid())
-				resize(simpleStudioWindowSize);
-		} else {
-			simpleStudioWindowSize = size();
-		}
-		simpleStudioMode = studioMode;
-	}
 
 	// In recorder mode keep the main window close to a compact Bandicam-style
 	// control panel. Showing preview expands the window without losing the
