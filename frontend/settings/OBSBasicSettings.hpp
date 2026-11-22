@@ -450,6 +450,7 @@ protected:
 public:
 	OBSBasicSettings(QWidget *parent);
 	~OBSBasicSettings();
+	void SelectOutputPage();
 
 	inline const QIcon &GetHotkeyConflictIcon() const { return hotkeyConflictIcon; }
 };
