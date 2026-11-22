@@ -88,6 +88,7 @@
 #include <QThread>
 #include <QWidgetAction>
 
+#include <algorithm>
 #include <memory>
 #include <mutex>
 #include <sstream>
