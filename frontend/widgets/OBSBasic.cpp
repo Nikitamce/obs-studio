@@ -2162,6 +2162,7 @@ void OBSBasic::SetupSimpleRecorderUi()
 		auto *refreshButton = new QPushButton(QStringLiteral("Обновить"), &dialog);
 		auto *closeButton = new QPushButton(QStringLiteral("Закрыть"), &dialog);
 		openButton->setEnabled(false);
+		folderButton->setEnabled(!recordingPath.isEmpty() && QDir(recordingPath).exists());
 		buttons->addWidget(openButton);
 		buttons->addWidget(folderButton);
 		buttons->addStretch();
@@ -2176,7 +2177,8 @@ void OBSBasic::SetupSimpleRecorderUi()
 		auto refreshList = [list, empty, recordingPath]() {
 			list->clear();
 			if (recordingPath.isEmpty()) {
-				empty->setText(QStringLiteral("Папка записей не настроена. Откройте настройки качества и укажите путь сохранения."));
+				empty->setText(QStringLiteral(
+					"Папка записей не настроена. Откройте настройки качества и укажите путь сохранения."));
 				empty->show();
 				return;
 			}
