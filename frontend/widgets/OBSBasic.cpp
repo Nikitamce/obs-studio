@@ -2618,7 +2618,8 @@ void OBSBasic::AddSimpleCaptureSource()
 		return;
 	}
 
-	SimpleRecorderSceneItemData addData{source.Get()};
+	SimpleRecorderSceneItemData addData{};
+	addData.source = source.Get();
 	obs_enter_graphics();
 	obs_scene_atomic_update(scene.Get(), AddSimpleRecorderSceneItem, &addData);
 	obs_leave_graphics();
@@ -2684,9 +2685,11 @@ void OBSBasic::AddSimpleCaptureSource()
 			OBSScene currentScene = main->GetCurrentScene();
 			if (!currentScene)
 				return;
-			SimpleRecorderSceneItemData addData{restored.Get(), nullptr,
-								    static_cast<int64_t>(obs_data_get_int(saved.Get(), "item_id")),
-								    true, obs_data_get_bool(saved.Get(), "visible")};
+			SimpleRecorderSceneItemData addData{};
+			addData.source = restored.Get();
+			addData.itemId = static_cast<int64_t>(obs_data_get_int(saved.Get(), "item_id"));
+			addData.restoreState = true;
+			addData.visible = obs_data_get_bool(saved.Get(), "visible");
 			obs_enter_graphics();
 			obs_scene_atomic_update(currentScene.Get(), AddSimpleRecorderSceneItem, &addData);
 			obs_leave_graphics();
