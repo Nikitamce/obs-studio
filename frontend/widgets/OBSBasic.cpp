@@ -2203,11 +2203,13 @@ void OBSBasic::SetupSimpleRecorderUi()
 
 		QDialog dialog(this);
 		dialog.setWindowTitle(QStringLiteral("Последние записи"));
-		dialog.resize(700, 540);
+		dialog.resize(820, 620);
 
 		auto *layout = new QVBoxLayout(&dialog);
 		auto *title = new QLabel(QStringLiteral("Последние записи"), &dialog);
+		title->setStyleSheet(QStringLiteral("font-size: 16px; font-weight: 700; color: #f0f2f5;"));
 		auto *folder = new QLabel(recordingPath, &dialog);
+		folder->setStyleSheet(QStringLiteral("color: #9299a5; font-size: 10px;"));
 		folder->setTextInteractionFlags(Qt::TextSelectableByMouse);
 		folder->setWordWrap(true);
 		auto *list = new QListWidget(&dialog);
@@ -2272,9 +2274,12 @@ void OBSBasic::SetupSimpleRecorderUi()
 				return;
 			}
 
-			const QStringList filters = {QStringLiteral("*.mkv"), QStringLiteral("*.mp4"), QStringLiteral("*.mov"),
-						     QStringLiteral("*.flv"), QStringLiteral("*.ts"), QStringLiteral("*.avi"),
-						     QStringLiteral("*.webm"), QStringLiteral("*.wmv")};
+			const QStringList filters = {
+				QStringLiteral("*.mkv"),  QStringLiteral("*.mp4"), QStringLiteral("*.mov"),
+				QStringLiteral("*.m4v"),  QStringLiteral("*.mpeg"), QStringLiteral("*.mpg"),
+				QStringLiteral("*.m2ts"), QStringLiteral("*.mts"),  QStringLiteral("*.flv"),
+				QStringLiteral("*.ts"),   QStringLiteral("*.avi"),  QStringLiteral("*.webm"),
+				QStringLiteral("*.wmv"),  QStringLiteral("*.ogv"),  QStringLiteral("*.3gp")};
 			const QFileInfoList files =
 				directory.entryInfoList(filters, QDir::Files | QDir::Readable, QDir::Time);
 			QFileIconProvider iconProvider;
@@ -2291,7 +2296,7 @@ void OBSBasic::SetupSimpleRecorderUi()
 					list);
 				item->setIcon(iconProvider.icon(info));
 				item->setData(Qt::UserRole, info.absoluteFilePath());
-				item->setToolTip(QStringLiteral("%1\\n%2").arg(info.absoluteFilePath(),
+				item->setToolTip(QStringLiteral("%1\n%2").arg(info.absoluteFilePath(),
 									     info.lastModified().toString(Qt::ISODate)));
 				item->setTextAlignment(Qt::AlignHCenter);
 				item->setSizeHint(QSize(184, 142));
