@@ -88,7 +88,7 @@
      </item>
      <item>
       <widget class="QPushButton" name="simpleCaptureSourceButton">
-       <property name="text"><string>Выбрать источник</string></property>
+       <property name="text"><string>Добавить источник</string></property>
        <property name="toolTip"><string>Выбрать или настроить источник захвата в OBS</string></property>
       </widget>
      </item>
@@ -113,6 +113,14 @@
        <property name="orientation"><enum>Qt::Orientation::Horizontal</enum></property>
        <property name="sizeHint" stdset="0"><size><width>24</width><height>20</height></size></property>
       </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="simplePreviewButton">
+       <property name="text"><string>Предпросмотр</string></property>
+       <property name="checkable"><bool>true</bool></property>
+       <property name="checked"><bool>false</bool></property>
+       <property name="toolTip"><string>Показать или скрыть окно предпросмотра</string></property>
+      </widget>
      </item>
      <item>
      <widget class="QPushButton" name="simpleRecordingsButton">
