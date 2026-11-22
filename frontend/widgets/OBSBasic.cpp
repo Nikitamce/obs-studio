@@ -139,6 +139,15 @@ extern void CheckExistingCookieId();
 namespace {
 std::once_flag saveOnceFlag;
 
+bool SelectSimpleRecorderSceneItemOnly(obs_scene_t * /*scene*/, obs_sceneitem_t *item, void *param)
+{
+	obs_sceneitem_t *selectedItem = static_cast<obs_sceneitem_t *>(param);
+	if (obs_sceneitem_is_group(item))
+		obs_sceneitem_group_enum_items(item, SelectSimpleRecorderSceneItemOnly, param);
+	obs_sceneitem_select(item, selectedItem == item);
+	return true;
+}
+
 #ifdef _WIN32
 QThreadPool &RecordingThumbnailPool()
 {
@@ -2593,7 +2602,7 @@ void OBSBasic::AddSimpleCaptureSource()
 
 	// Select the new source in OBS so preview transforms (including Alt-drag
 	// cropping in Area mode) target the source the user just added.
-	obs_sceneitem_select(sceneItem, true);
+	obs_scene_enum_items(scene.Get(), SelectSimpleRecorderSceneItemOnly, sceneItem);
 
 	// Register the operation in OBS's native undo stack so Ctrl+Z and redo
 	// behave exactly as they do for sources created in the standard picker.
@@ -2649,7 +2658,7 @@ void OBSBasic::AddSimpleCaptureSource()
 			if (restoredItem) {
 				obs_sceneitem_set_id(restoredItem, static_cast<int64_t>(obs_data_get_int(saved.Get(), "item_id")));
 				obs_sceneitem_set_visible(restoredItem, obs_data_get_bool(saved.Get(), "visible"));
-				obs_sceneitem_select(restoredItem, true);
+				obs_scene_enum_items(currentScene.Get(), SelectSimpleRecorderSceneItemOnly, restoredItem);
 			}
 		};
 		undo_s.add_action(QTStr("Undo.Add").arg(QString::fromStdString(sourceName)), undo, redo,
