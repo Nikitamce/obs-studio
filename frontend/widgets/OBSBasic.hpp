@@ -269,6 +269,8 @@ private:
 	uint32_t simpleRecordingSeconds = 0;
 	QSize simpleStudioWindowSize;
 	bool simpleStudioMode = true;
+	QByteArray simpleStudioDockState;
+	bool simpleStudioDockStateSaved = false;
 
 	void OnEvent(enum obs_frontend_event event);
 	void ShowSettingsDialog(bool outputPage);
