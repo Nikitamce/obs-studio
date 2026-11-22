@@ -2208,6 +2208,29 @@ void OBSBasic::SetupSimpleRecorderUi()
 		folder->setTextInteractionFlags(Qt::TextSelectableByMouse);
 		folder->setWordWrap(true);
 		auto *list = new QListWidget(&dialog);
+		list->setViewMode(QListView::IconMode);
+		list->setFlow(QListView::LeftToRight);
+		list->setResizeMode(QListView::Adjust);
+		list->setMovement(QListView::Static);
+		list->setWrapping(true);
+		list->setWordWrap(true);
+		list->setSpacing(8);
+		list->setIconSize(QSize(168, 94));
+		list->setGridSize(QSize(192, 150));
+		list->setSelectionMode(QAbstractItemView::SingleSelection);
+		list->setUniformItemSizes(true);
+		dialog.setStyleSheet(QStringLiteral(
+			"QDialog { background: #1e2024; color: #eef0f3; }"
+			"QLabel { color: #c7cbd2; }"
+			"QListWidget { background: #17191d; border: 1px solid #343840; border-radius: 10px; padding: 8px; }"
+			"QListWidget::item { color: #e7eaf0; background: #262a30; border: 1px solid #343840; "
+			"border-radius: 8px; padding: 7px; }"
+			"QListWidget::item:hover { background: #303640; }"
+			"QListWidget::item:selected { background: #34485f; border-color: #648bb4; }"
+			"QPushButton { color: #eef0f3; background: #30343b; border: 1px solid #464c56; "
+			"border-radius: 7px; padding: 8px 14px; min-height: 22px; }"
+			"QPushButton:hover { background: #3c424c; }"
+			"QPushButton:disabled { color: #747b86; background: #25282d; }"));
 		auto *empty = new QLabel(&dialog);
 		empty->setAlignment(Qt::AlignCenter);
 		empty->setWordWrap(true);
@@ -2265,7 +2288,31 @@ void OBSBasic::SetupSimpleRecorderUi()
 					list);
 				item->setIcon(iconProvider.icon(info));
 				item->setData(Qt::UserRole, info.absoluteFilePath());
-				item->setSizeHint(QSize(0, 58));
+				item->setToolTip(QStringLiteral("%1\\n%2").arg(info.absoluteFilePath(),
+									     info.lastModified().toString(Qt::ISODate)));
+				item->setTextAlignment(Qt::AlignHCenter);
+				item->setSizeHint(QSize(184, 142));
+#ifdef _WIN32
+				QPointer<QListWidget> listGuard(list);
+				const QString filePath = info.absoluteFilePath();
+				QThreadPool::globalInstance()->start(QRunnable::create([listGuard, filePath]() {
+					QImage thumbnail = LoadShellVideoThumbnail(filePath);
+					if (thumbnail.isNull() || !listGuard)
+						return;
+
+					QMetaObject::invokeMethod(listGuard.data(), [listGuard, filePath, thumbnail]() {
+						if (!listGuard)
+							return;
+						for (int row = 0; row < listGuard->count(); ++row) {
+							QListWidgetItem *current = listGuard->item(row);
+							if (current->data(Qt::UserRole).toString() == filePath) {
+								current->setIcon(QIcon(QPixmap::fromImage(thumbnail)));
+								break;
+							}
+						}
+					}, Qt::QueuedConnection);
+				}));
+#endif
 				++added;
 			}
 
