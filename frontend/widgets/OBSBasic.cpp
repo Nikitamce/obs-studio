@@ -174,9 +174,8 @@ bool IsSimpleRecorderInputRegistered(const char *unversionedId)
 		return false;
 
 	for (size_t index = 0;; ++index) {
-		const char *versionedId = nullptr;
 		const char *registeredUnversionedId = nullptr;
-		if (!obs_enum_input_types2(index, &versionedId, &registeredUnversionedId))
+		if (!obs_enum_input_types2(index, nullptr, &registeredUnversionedId))
 			return false;
 		if (registeredUnversionedId && strcmp(registeredUnversionedId, unversionedId) == 0)
 			return true;
