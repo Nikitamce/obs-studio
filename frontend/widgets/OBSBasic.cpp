@@ -28,6 +28,18 @@
 
 #include <obs-module.h>
 
+#include <QDesktopServices>
+#include <QDir>
+#include <QDialog>
+#include <QFileIconProvider>
+#include <QFileInfo>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QListWidget>
+#include <QPushButton>
+#include <QUrl>
+#include <QVBoxLayout>
+
 #include <QMessageBox>
 #include <QTimer>
 
@@ -2120,7 +2132,112 @@ void OBSBasic::SetupSimpleRecorderUi()
 
 	connect(ui->simpleSettingsButton, &QPushButton::clicked, this, &OBSBasic::on_action_RecordingSettings_triggered);
 	connect(ui->simpleRecordingsButton, &QPushButton::clicked, this, [this]() {
-		on_actionShow_Recordings_triggered();
+		const char *mode = config_get_string(activeConfiguration, "Output", "Mode");
+		const bool advanced = mode && strcmp(mode, "Advanced") == 0;
+		const char *advancedType = config_get_string(activeConfiguration, "AdvOut", "RecType");
+		const char *path = advanced
+				   ? ((advancedType && strcmp(advancedType, "Standard") != 0)
+					      ? config_get_string(activeConfiguration, "AdvOut", "FFFilePath")
+					      : config_get_string(activeConfiguration, "AdvOut", "RecFilePath"))
+				   : config_get_string(activeConfiguration, "SimpleOutput", "FilePath");
+		const QString recordingPath = QString::fromUtf8(path ? path : "");
+
+		QDialog dialog(this);
+		dialog.setWindowTitle(QStringLiteral("Последние записи"));
+		dialog.resize(700, 540);
+
+		auto *layout = new QVBoxLayout(&dialog);
+		auto *title = new QLabel(QStringLiteral("Последние записи"), &dialog);
+		auto *folder = new QLabel(recordingPath, &dialog);
+		folder->setTextInteractionFlags(Qt::TextSelectableByMouse);
+		folder->setWordWrap(true);
+		auto *list = new QListWidget(&dialog);
+		auto *empty = new QLabel(&dialog);
+		empty->setAlignment(Qt::AlignCenter);
+		empty->setWordWrap(true);
+		empty->setMinimumHeight(70);
+		auto *buttons = new QHBoxLayout;
+		auto *openButton = new QPushButton(QStringLiteral("Открыть запись"), &dialog);
+		auto *folderButton = new QPushButton(QStringLiteral("Открыть папку"), &dialog);
+		auto *refreshButton = new QPushButton(QStringLiteral("Обновить"), &dialog);
+		auto *closeButton = new QPushButton(QStringLiteral("Закрыть"), &dialog);
+		openButton->setEnabled(false);
+		buttons->addWidget(openButton);
+		buttons->addWidget(folderButton);
+		buttons->addStretch();
+		buttons->addWidget(refreshButton);
+		buttons->addWidget(closeButton);
+		layout->addWidget(title);
+		layout->addWidget(folder);
+		layout->addWidget(list, 1);
+		layout->addWidget(empty);
+		layout->addLayout(buttons);
+
+		auto refreshList = [list, empty, recordingPath]() {
+			list->clear();
+			if (recordingPath.isEmpty()) {
+				empty->setText(QStringLiteral("Папка записей не настроена. Откройте настройки качества и укажите путь сохранения."));
+				empty->show();
+				return;
+			}
+
+			QDir directory(recordingPath);
+			if (!directory.exists()) {
+				empty->setText(QStringLiteral("Папка записей ещё не создана:\n%1").arg(recordingPath));
+				empty->show();
+				return;
+			}
+
+			const QStringList filters = {QStringLiteral("*.mkv"), QStringLiteral("*.mp4"), QStringLiteral("*.mov"),
+						     QStringLiteral("*.flv"), QStringLiteral("*.ts"), QStringLiteral("*.avi"),
+						     QStringLiteral("*.webm"), QStringLiteral("*.wmv")};
+			const QFileInfoList files =
+				directory.entryInfoList(filters, QDir::Files | QDir::Readable, QDir::Time);
+			QFileIconProvider iconProvider;
+			int added = 0;
+			for (const QFileInfo &info : files) {
+				if (added >= 30)
+					break;
+				const QString size = info.size() >= 1024LL * 1024LL * 1024LL
+						     ? QStringLiteral("%1 GB").arg(info.size() / (1024.0 * 1024.0 * 1024.0), 0, 'f', 1)
+						     : QStringLiteral("%1 MB").arg(info.size() / (1024.0 * 1024.0), 0, 'f', 1);
+				auto *item = new QListWidgetItem(
+					QStringLiteral("%1\n%2  •  %3")
+						.arg(info.fileName(), info.lastModified().toString(QStringLiteral("dd.MM.yyyy HH:mm")), size),
+					list);
+				item->setIcon(iconProvider.icon(info));
+				item->setData(Qt::UserRole, info.absoluteFilePath());
+				item->setSizeHint(QSize(0, 58));
+				++added;
+			}
+
+			empty->setText(added == 0 ? QStringLiteral("В этой папке пока нет записей.") : QString());
+			empty->setVisible(added == 0);
+		};
+
+		auto openSelected = [&dialog, list]() {
+			QListWidgetItem *item = list->currentItem();
+			if (!item)
+				return;
+			const QString filePath = item->data(Qt::UserRole).toString();
+			if (QFileInfo::exists(filePath)) {
+				QDesktopServices::openUrl(QUrl::fromLocalFile(filePath));
+				dialog.accept();
+			}
+		};
+		connect(list, &QListWidget::currentItemChanged, &dialog,
+			[openButton](QListWidgetItem *current, QListWidgetItem *) { openButton->setEnabled(current != nullptr); });
+		connect(list, &QListWidget::itemDoubleClicked, &dialog,
+			[openSelected](QListWidgetItem *) { openSelected(); });
+		connect(openButton, &QPushButton::clicked, &dialog, openSelected);
+		connect(folderButton, &QPushButton::clicked, &dialog, [recordingPath]() {
+			if (!recordingPath.isEmpty() && QDir(recordingPath).exists())
+				QDesktopServices::openUrl(QUrl::fromLocalFile(recordingPath));
+		});
+		connect(refreshButton, &QPushButton::clicked, &dialog, refreshList);
+		connect(closeButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+		refreshList();
+		dialog.exec();
 	});
 	connect(ui->simpleCaptureSourceButton, &QPushButton::clicked, this, &OBSBasic::AddSimpleCaptureSource);
 	connect(ui->simpleRecordButton, &QPushButton::clicked, this, [this]() {
