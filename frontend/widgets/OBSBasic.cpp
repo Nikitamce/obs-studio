@@ -2204,8 +2204,16 @@ void OBSBasic::AddSimpleCaptureSource()
 		sourceName = std::string(baseName) + " (" + std::to_string(suffix) + ")";
 	}
 
-	OBSDataAutoRelease settings(obs_data_create());
-	OBSSourceAutoRelease source(obs_source_create(sourceId, sourceName.c_str(), settings.Get(), nullptr));
+	const char *latestSourceId = obs_get_latest_input_type_id(sourceId);
+	if (!latestSourceId) {
+		QMessageBox::warning(this, QStringLiteral("Источник недоступен"),
+				     QStringLiteral("Выбранный тип захвата не зарегистрирован в этой сборке OBS."));
+		return;
+	}
+
+	// Match OBS's native source creation path: use the latest registered input
+	// type ID and let the source apply its own default settings.
+	OBSSourceAutoRelease source(obs_source_create(latestSourceId, sourceName.c_str(), nullptr, nullptr));
 	if (!source) {
 		QMessageBox::warning(this, QStringLiteral("Не удалось добавить источник"),
 				     QStringLiteral("OBS не смог создать выбранный источник захвата. Проверьте, что модуль захвата Windows загружен."));
@@ -2220,11 +2228,59 @@ void OBSBasic::AddSimpleCaptureSource()
 		return;
 	}
 
-	if (!obs_scene_add(scene.Get(), source.Get())) {
+	obs_sceneitem_t *sceneItem = obs_scene_add(scene.Get(), source.Get());
+	if (!sceneItem) {
 		QMessageBox::warning(this, QStringLiteral("Не удалось добавить источник"),
 				     QStringLiteral("Источник создан, но не удалось добавить его в текущую сцену."));
 		obs_source_remove(source.Get());
 		return;
+	}
+
+	// Register the operation in OBS's native undo stack so Ctrl+Z and redo
+	// behave exactly as they do for sources created in the standard picker.
+	OBSSource currentSceneSource = GetCurrentSceneSource();
+	const char *sceneUuidRaw = currentSceneSource ? obs_source_get_uuid(currentSceneSource.Get()) : nullptr;
+	const char *sourceUuidRaw = obs_source_get_uuid(source.Get());
+	if (sceneUuidRaw && sourceUuidRaw) {
+		const std::string sceneUuid(sceneUuidRaw);
+		OBSDataAutoRelease wrapper(obs_data_create());
+		obs_data_set_string(wrapper.Get(), "id", latestSourceId);
+		obs_data_set_int(wrapper.Get(), "item_id", obs_sceneitem_get_id(sceneItem));
+		obs_data_set_string(wrapper.Get(), "name", sourceName.c_str());
+		obs_data_set_bool(wrapper.Get(), "visible", true);
+
+		auto undo = [sceneUuid](const std::string &uuid) {
+			OBSBasic *main = OBSBasic::Get();
+			OBSSourceAutoRelease addedSource(obs_get_source_by_uuid(uuid.c_str()));
+			if (addedSource)
+				obs_source_remove(addedSource.Get());
+			OBSSourceAutoRelease sceneSource(obs_get_source_by_uuid(sceneUuid.c_str()));
+			if (sceneSource)
+				main->SetCurrentScene(sceneSource.Get(), true);
+		};
+		auto redo = [sceneUuid](const std::string &data) {
+			OBSBasic *main = OBSBasic::Get();
+			OBSSourceAutoRelease sceneSource(obs_get_source_by_uuid(sceneUuid.c_str()));
+			if (!sceneSource)
+				return;
+			main->SetCurrentScene(sceneSource.Get(), true);
+
+			OBSDataAutoRelease saved(obs_data_create_from_json(data.c_str()));
+			const char *savedId = obs_get_latest_input_type_id(obs_data_get_string(saved.Get(), "id"));
+			OBSSourceAutoRelease restored(
+				obs_source_create(savedId, obs_data_get_string(saved.Get(), "name"), nullptr, nullptr));
+			if (!restored)
+				return;
+
+			OBSScene currentScene = main->GetCurrentScene();
+			if (!currentScene)
+				return;
+			obs_sceneitem_t *restoredItem = obs_scene_add(currentScene.Get(), restored.Get());
+			if (restoredItem)
+				obs_sceneitem_set_id(restoredItem, static_cast<int64_t>(obs_data_get_int(saved.Get(), "item_id")));
+		};
+		undo_s.add_action(QTStr("Undo.Add").arg(QString::fromStdString(sourceName)), undo, redo,
+				  std::string(sourceUuidRaw), std::string(obs_data_get_json(wrapper.Get())));
 	}
 
 	// Open the native properties dialog so the user can select the display,
