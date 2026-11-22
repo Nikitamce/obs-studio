@@ -294,6 +294,7 @@ public slots:
 	void applicationShutdown() noexcept;
 	void toggleMixerLayout();
 	void SetupSimpleRecorderUi();
+	void AddSimpleCaptureSource();
 
 public:
 	/* `undo_s` needs to be declared after `ui` to prevent an uninitialized
