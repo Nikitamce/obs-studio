@@ -2267,6 +2267,8 @@ void OBSBasic::AddSimpleCaptureSource()
 
 			OBSDataAutoRelease saved(obs_data_create_from_json(data.c_str()));
 			const char *savedId = obs_get_latest_input_type_id(obs_data_get_string(saved.Get(), "id"));
+			if (!savedId)
+				return;
 			OBSSourceAutoRelease restored(
 				obs_source_create(savedId, obs_data_get_string(saved.Get(), "name"), nullptr, nullptr));
 			if (!restored)
