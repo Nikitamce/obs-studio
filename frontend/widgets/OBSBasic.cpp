@@ -35,6 +35,9 @@
 #include <QDockWidget>
 #include <QFileIconProvider>
 #include <QFileInfo>
+#include <QImage>
+#include <QThreadPool>
+#include <QRunnable>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListWidget>
@@ -87,6 +90,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include "Windows.h"
+#include <ShObjIdl.h>
 #endif
 
 #include "moc_OBSBasic.cpp"
@@ -127,6 +131,55 @@ extern void CheckExistingCookieId();
 
 namespace {
 std::once_flag saveOnceFlag;
+
+#ifdef _WIN32
+QImage LoadShellVideoThumbnail(const QString &filePath)
+{
+	QImage image;
+	const HRESULT initResult = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+	if (FAILED(initResult) && initResult != RPC_E_CHANGED_MODE)
+		return image;
+	const bool uninitializeCom = SUCCEEDED(initResult);
+
+	IShellItemImageFactory *imageFactory = nullptr;
+	const std::wstring path = filePath.toStdWString();
+	HRESULT result = SHCreateItemFromParsingName(path.c_str(), nullptr, IID_PPV_ARGS(&imageFactory));
+	if (SUCCEEDED(result) && imageFactory) {
+		HBITMAP thumbnail = nullptr;
+		const SIZE targetSize = {320, 180};
+		result = imageFactory->GetImage(targetSize, SIIGBF_THUMBNAILONLY | SIIGBF_BIGGERSIZEOK, &thumbnail);
+		if (SUCCEEDED(result) && thumbnail) {
+			BITMAP bitmap = {};
+			if (GetObjectW(thumbnail, sizeof(bitmap), &bitmap) == sizeof(bitmap) && bitmap.bmWidth > 0 &&
+			    bitmap.bmHeight > 0) {
+				BITMAPINFO info = {};
+				info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+				info.bmiHeader.biWidth = bitmap.bmWidth;
+				info.bmiHeader.biHeight = -bitmap.bmHeight;
+				info.bmiHeader.biPlanes = 1;
+				info.bmiHeader.biBitCount = 32;
+				info.bmiHeader.biCompression = BI_RGB;
+
+				image = QImage(bitmap.bmWidth, bitmap.bmHeight, QImage::Format_RGB32);
+				HDC deviceContext = GetDC(nullptr);
+				if (!deviceContext ||
+				    GetDIBits(deviceContext, thumbnail, 0, static_cast<UINT>(bitmap.bmHeight), image.bits(), &info,
+					      DIB_RGB_COLORS) != bitmap.bmHeight) {
+					image = QImage();
+				}
+				if (deviceContext)
+					ReleaseDC(nullptr, deviceContext);
+			}
+			DeleteObject(thumbnail);
+		}
+		imageFactory->Release();
+	}
+
+	if (uninitializeCom)
+		CoUninitialize();
+	return image;
+}
+#endif
 }
 
 extern void setupDockAction(QDockWidget *dock);
