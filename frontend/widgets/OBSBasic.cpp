@@ -87,6 +87,7 @@
 #include <QThread>
 #include <QWidgetAction>
 
+#include <memory>
 #include <mutex>
 #include <sstream>
 #include <string>
@@ -138,6 +139,13 @@ namespace {
 std::once_flag saveOnceFlag;
 
 #ifdef _WIN32
+QThreadPool &RecordingThumbnailPool()
+{
+	static QThreadPool pool;
+	pool.setMaxThreadCount(2);
+	return pool;
+}
+
 QImage LoadShellVideoThumbnail(const QString &filePath)
 {
 	QImage image;
@@ -2306,7 +2314,7 @@ void OBSBasic::SetupSimpleRecorderUi()
 #ifdef _WIN32
 				QPointer<QListWidget> listGuard(list);
 				const QString filePath = info.absoluteFilePath();
-				QThreadPool::globalInstance()->start(QRunnable::create([listGuard, filePath]() {
+				RecordingThumbnailPool().start(QRunnable::create([listGuard, filePath]() {
 					QImage thumbnail = LoadShellVideoThumbnail(filePath);
 					if (thumbnail.isNull() || !listGuard)
 						return;
