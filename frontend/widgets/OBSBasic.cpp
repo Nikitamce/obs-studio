@@ -149,6 +149,24 @@ bool SelectSimpleRecorderSceneItemOnly(obs_scene_t * /*scene*/, obs_sceneitem_t 
 	return true;
 }
 
+struct SimpleRecorderSceneItemData {
+	obs_source_t *source;
+	obs_sceneitem_t *sceneItem = nullptr;
+	int64_t itemId = 0;
+	bool restoreState = false;
+	bool visible = true;
+};
+
+void AddSimpleRecorderSceneItem(void *data, obs_scene_t *scene)
+{
+	auto *addData = static_cast<SimpleRecorderSceneItemData *>(data);
+	addData->sceneItem = obs_scene_add(scene, addData->source);
+	if (addData->sceneItem && addData->restoreState) {
+		obs_sceneitem_set_id(addData->sceneItem, addData->itemId);
+		obs_sceneitem_set_visible(addData->sceneItem, addData->visible);
+	}
+}
+
 #ifdef _WIN32
 QThreadPool &RecordingThumbnailPool()
 {
@@ -2600,7 +2618,11 @@ void OBSBasic::AddSimpleCaptureSource()
 		return;
 	}
 
-	obs_sceneitem_t *sceneItem = obs_scene_add(scene.Get(), source.Get());
+	SimpleRecorderSceneItemData addData{source.Get()};
+	obs_enter_graphics();
+	obs_scene_atomic_update(scene.Get(), AddSimpleRecorderSceneItem, &addData);
+	obs_leave_graphics();
+	obs_sceneitem_t *sceneItem = addData.sceneItem;
 	if (!sceneItem) {
 		QMessageBox::warning(this, QStringLiteral("Не удалось добавить источник"),
 				     QStringLiteral("Источник создан, но не удалось добавить его в текущую сцену."));
@@ -2662,12 +2684,14 @@ void OBSBasic::AddSimpleCaptureSource()
 			OBSScene currentScene = main->GetCurrentScene();
 			if (!currentScene)
 				return;
-			obs_sceneitem_t *restoredItem = obs_scene_add(currentScene.Get(), restored.Get());
-			if (restoredItem) {
-				obs_sceneitem_set_id(restoredItem, static_cast<int64_t>(obs_data_get_int(saved.Get(), "item_id")));
-				obs_sceneitem_set_visible(restoredItem, obs_data_get_bool(saved.Get(), "visible"));
-				obs_scene_enum_items(currentScene.Get(), SelectSimpleRecorderSceneItemOnly, restoredItem);
-			}
+			SimpleRecorderSceneItemData addData{restored.Get(), nullptr,
+								    static_cast<int64_t>(obs_data_get_int(saved.Get(), "item_id")),
+								    true, obs_data_get_bool(saved.Get(), "visible")};
+			obs_enter_graphics();
+			obs_scene_atomic_update(currentScene.Get(), AddSimpleRecorderSceneItem, &addData);
+			obs_leave_graphics();
+			if (addData.sceneItem)
+				obs_scene_enum_items(currentScene.Get(), SelectSimpleRecorderSceneItemOnly, addData.sceneItem);
 		};
 		undo_s.add_action(QTStr("Undo.Add").arg(QString::fromStdString(sourceName)), undo, redo,
 				  std::string(sourceUuidRaw), std::string(obs_data_get_json(wrapper.Get())));
