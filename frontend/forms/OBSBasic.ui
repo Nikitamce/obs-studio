@@ -90,7 +90,7 @@
                  </item>
             <item>
                   <widget class="QPushButton" name="simpleCaptureSourceButton">
-                   <property name="text"><string>Добавить источник</string></property>
+                   <property name="text"><string>Добавить</string></property>
                    <property name="toolTip"><string>Выбрать или настроить источник захвата в OBS</string></property>
                   </widget>
                  </item>
@@ -144,7 +144,7 @@
                 </item>
             <item>
                   <widget class="QPushButton" name="simpleSettingsButton">
-                   <property name="text"><string>Настройки записи</string></property>
+                   <property name="text"><string>Настройки</string></property>
                   </widget>
                  </item>
             <item>
