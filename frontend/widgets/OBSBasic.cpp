@@ -138,6 +138,7 @@ OBSBasic::OBSBasic(QWidget *parent) : OBSMainWindow(parent), undo_s(ui), ui(new 
 
 	ui->setupUi(this);
 	ui->previewDisabledWidget->setVisible(false);
+	SetupSimpleRecorderUi();
 
 	/* Set up streaming connections */
 	connect(
