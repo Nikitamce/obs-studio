@@ -77,6 +77,7 @@ target_sources(
 )
 
 if(OS_WINDOWS)
+  target_link_libraries(obs-studio PRIVATE ole32 shell32)
   include(cmake/os-windows.cmake)
 elseif(OS_MACOS)
   include(cmake/os-macos.cmake)
