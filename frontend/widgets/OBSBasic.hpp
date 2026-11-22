@@ -265,6 +265,8 @@ private:
 	std::unique_ptr<Ui::OBSBasic> ui;
 	QPointer<QTimer> simpleRecordTimer;
 	uint32_t simpleRecordingSeconds = 0;
+	QSize simpleStudioWindowSize;
+	bool simpleStudioMode = true;
 
 	void OnEvent(enum obs_frontend_event event);
 	void ShowSettingsDialog(bool outputPage);
