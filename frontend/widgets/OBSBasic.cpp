@@ -2255,8 +2255,9 @@ void OBSBasic::AddSimpleCaptureSource()
 	// type ID and let the source apply its own default settings.
 	OBSSourceAutoRelease source(obs_source_create(latestSourceId, sourceName.c_str(), nullptr, nullptr));
 	if (!source) {
-		QMessageBox::warning(this, QStringLiteral("Не удалось добавить источник"),
-				     QStringLiteral("OBS не смог создать выбранный источник захвата. Проверьте, что модуль захвата Windows загружен."));
+		QMessageBox::warning(
+			this, QStringLiteral("Не удалось добавить источник"),
+			QStringLiteral("OBS не смог создать выбранный источник захвата. Проверьте, что модуль захвата Windows загружен."));
 		return;
 	}
 
